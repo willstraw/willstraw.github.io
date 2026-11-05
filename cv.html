@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="nav.js" defer></script>
+  <!-- Start downloading the CV straight away, alongside PDF.js, rather than once the script has run -->
+  <link rel="preload" href="media/cv.pdf" as="fetch" crossorigin>
+  <style>
+    /* The CV shown on the site itself, drawn by PDF.js as a white sheet (one per page) on the page colour, so it looks
+       the same in every browser, phones included, where a PDF often can't be shown inside a page at all. The sheet is
+       as wide as the screen allows, up to 900px, and the script sets its shape from the PDF's own page size. */
+    .cv {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: clamp(24px, 4vw, 48px) 16px 64px;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+    }
+    /* The download link above the sheet, at its right, in the nav's blueprint blue */
+    .cv-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }
+    .cv-bar a,
+    .cv-status a {
+      color: #19519a;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.25em;
+    }
+    .cv-pages {
+      display: grid;
+      gap: 24px;
+    }
+    .cv-page {
+      position: relative;
+      aspect-ratio: 612 / 792;
+      background: #fff;
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.14);
+    }
+    .cv-page canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* The PDF's own links, laid over the drawn page where they sit in it */
+    .cv-link {
+      position: absolute;
+    }
+    /* "Loading…", or what went wrong, in the middle of an empty sheet until the CV is drawn */
+    .cv-status {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 24px;
+      text-align: center;
+      line-height: 1.6;
+      color: #3a3e45;
+    }
+  </style>
+</head>
+<body>
+  <nav id="nav">
+    <span class="nav-name">William Bartholomew</span>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html">Home</a>
+      <a href="projects.html">Projects</a>
+      <a href="cv.html" aria-current="page">CV</a>
+    </div>
+  </nav>
+
+  <!-- The CV itself is media/cv.pdf (the redacted copy, see CLAUDE.md). To update it, replace that file; this page
+       picks up however many pages it has. -->
+  <main class="cv" id="content">
+    <div class="cv-bar">
+      <a href="media/cv.pdf" download="William Bartholomew CV.pdf">Download PDF</a>
+    </div>
+    <div class="cv-pages">
+      <div class="cv-page">
+        <!-- The script puts "Loading CV…" here; without JavaScript this message shows instead -->
+        <p class="cv-status"><noscript><span>This page needs JavaScript to show the CV. <a href="media/cv.pdf">Open the PDF</a> instead.</span></noscript></p>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    // PDF.js draws the CV onto a canvas for each page. Its worker (which reads the PDF off the main thread) comes from
+    // the same CDN; PDF.js wraps a cross-origin worker itself, so this works without hosting a copy here.
+    const PDFJS = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168';
+    const FILE = 'media/cv.pdf';
+    const pagesEl = document.querySelector('.cv-pages');
+    const first = pagesEl.querySelector('.cv-page');
+    const status = first.querySelector('.cv-status');
+    const phone = window.matchMedia('(max-width: 720px)');
+
+    function fail(why) {
+      status.innerHTML = `<span>${why} <a href="${FILE}">Open the PDF</a> instead.</span>`;
+    }
+
+    status.textContent = 'Loading CV…';
+    try {
+      if (location.protocol === 'file:') {
+        throw new Error('browsers block reading files from a page opened straight from disk, so use Live Server');
+      }
+      // The file is fetched here and handed over whole, so the preload above is used, and if it can't be found the
+      // page can say so
+      const [pdfjs, response] = await Promise.all([import(`${PDFJS}/build/pdf.min.mjs`), fetch(FILE)]);
+      if (!response.ok) {
+        fail(`The CV file couldn’t be found (the server said ${response.status} for ${response.url}).`);
+        throw new Error(`${FILE}: ${response.status}`);
+      }
+      pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS}/build/pdf.worker.min.mjs`;
+      const pdf = await pdfjs.getDocument({
+        data: new Uint8Array(await response.arrayBuffer()),
+        // Only needed if the PDF leaves a font or character map out, but cheap to allow for
+        cMapUrl: `${PDFJS}/cmaps/`,
+        cMapPacked: true,
+        standardFontDataUrl: `${PDFJS}/standard_fonts/`,
+      }).promise;
+
+      // One sheet per page, shaped like the page, with its links laid over it as percentages of the sheet so they
+      // stay in place at any width without being worked out again
+      const pages = [];
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const base = page.getViewport({ scale: 1 });
+        const el = n === 1 ? first : pagesEl.appendChild(document.createElement('div'));
+        el.className = 'cv-page';
+        el.style.aspectRatio = `${base.width} / ${base.height}`;
+        const canvas = document.createElement('canvas');
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', `William Bartholomew’s CV, page ${n} of ${pdf.numPages}`);
+        el.prepend(canvas);
+        for (const note of await page.getAnnotations()) {
+          if (note.subtype !== 'Link' || !note.url) continue;
+          const [x1, y1, x2, y2] = base.convertToViewportRectangle(note.rect);
+          const a = document.createElement('a');
+          a.className = 'cv-link';
+          a.href = note.url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.setAttribute('aria-label', note.url);
+          Object.assign(a.style, {
+            left: `${(Math.min(x1, x2) / base.width) * 100}%`,
+            top: `${(Math.min(y1, y2) / base.height) * 100}%`,
+            width: `${(Math.abs(x2 - x1) / base.width) * 100}%`,
+            height: `${(Math.abs(y2 - y1) / base.height) * 100}%`,
+          });
+          el.append(a);
+        }
+        pages.push({ page, base, canvas, task: null, drawnAt: 0 });
+      }
+
+      // Each page is drawn at the sheet's width in screen pixels (capped at 2x on high-DPI screens). Phones get
+      // twice that again, so pinching in to read the small print stays sharp.
+      function draw() {
+        for (const p of pages) {
+          const width = p.canvas.clientWidth;
+          if (!width || width === p.drawnAt) continue;
+          p.drawnAt = width;
+          const ratio = Math.min(window.devicePixelRatio || 1, 2) * (phone.matches ? 2 : 1);
+          const viewport = p.page.getViewport({ scale: (width / p.base.width) * ratio });
+          p.task?.cancel();
+          p.canvas.width = Math.round(viewport.width);
+          p.canvas.height = Math.round(viewport.height);
+          p.task = p.page.render({ canvasContext: p.canvas.getContext('2d'), viewport });
+          p.task.promise.then(() => status.remove(), (e) => {
+            if (e?.name !== 'RenderingCancelledException') fail('The CV couldn’t be drawn here.');
+          });
+        }
+      }
+      draw();
+      // Drawn again when the sheet changes width, a moment after resizing stops rather than on every step of it
+      let timer;
+      new ResizeObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(draw, 150);
+      }).observe(pagesEl);
+    } catch (e) {
+      console.error(e);
+      // A missing file has already said so above
+      if (!status.querySelector('a')) {
+        fail(location.protocol === 'file:' ? 'This page has to be opened through Live Server to show the CV.' : 'The CV couldn’t be loaded here.');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -20,6 +20,7 @@ from the jsDelivr CDN through an import map in each page that needs it.
 | `projects.html` + `projects.css` | Projects page: full-height hero with the MUR montage (`media/MUR_edit_16x9.mp4`, muted loop, paused off screen) behind the heading, then four portfolio tiles (Formula SAE, Rear Suspension, Tyre Model, Cyberstar) linking to their pages. The CSS still lays out a fifth and sixth tile. |
 | `formula-sae.html`, `tyre-model.html`, `cyberstar.html` | Project pages: a picture across the top three fifths of the screen with the project's name over it, and room below for the write-up. |
 | `rear-suspension.html` | 3D viewer of the VD26 rear suspension `.bin` across the top three fifths of the screen (with `viewer-fade`), opened from the Rear Suspension tile on Projects. Its nav marks Projects as the current page. |
+| `cv.html` | The CV shown on the site: PDF.js 4.4.168 (jsDelivr) draws `media/cv.pdf` as a white sheet per page, with the PDF's links laid over it and a Download PDF link. Works on phones, where an embedded PDF often doesn't. Needs http (Live Server). Replacing `media/cv.pdf` is all an update needs. |
 | `style.css` | Shared base styles and the blueprint-grid nav bar: "William Bartholomew" (`.nav-name`, plain text, not a link) on the left and the page links on the right, with a burger menu at ≤720px where the name is hidden and nav.js's "WB" shows instead. Defines `--nav-height` and `--name-inset` (the space before the name, which the Home heading also uses so the two line up). |
 | `nav.js` | Burger toggle, plus it injects the mobile page title (from the `aria-current` link) and the "WB" home link. |
 | `viewer.js` + `viewer.css` | Reusable Fusion-style 3D viewer (see below). |
@@ -32,7 +33,7 @@ from the jsDelivr CDN through an import map in each page that needs it.
 ## Conventions and gotchas
 
 - **The nav markup is copied into every page.** Adding, renaming or reordering a link (or the name) means editing every HTML page (Home, Projects and the four project pages) and keeping
-  `aria-current="page"` on the right one. The links are Home, Projects and CV (which opens `media/cv.pdf` in a new tab, as does the Home drawing's note 3, which pairs with it by href); `.nav-links` is a flex row with a gap, so any number of links fits.
+  `aria-current="page"` on the right one. The links are Home, Projects and CV (`cv.html`; the Home drawing's note 3 and CV box link there too, and note 3 pairs with the nav link by href, so keep their hrefs identical); `.nav-links` is a flex row with a gap, so any number of links fits. The CV page has the nav as well.
 - **One breakpoint: `max-width: 720px`.** It's used in `style.css`, `viewer.css`, `projects.css`, the inline styles in `index.html`
   and the `staticOnPhones` media query in `viewer.js`. Keep them in step.
 - Phone heights use a `vh` line followed by an `svh` override, for browsers without `svh`.
