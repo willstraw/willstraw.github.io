@@ -213,6 +213,28 @@ html::-webkit-scrollbar {
     border-left: 2px solid #19519a;
   }
 }
+/* Add .writeup-columns to set the paragraphs side by side instead, each with its own blue rule, across the full width
+   (the right edge lines up with the nav's last link, as on Home). Each column is kept at least 18em wide, so on a
+   narrower window they drop to two across, then one under another, with no extra breakpoint. */
+@media (min-width: 721px) {
+  .writeup-columns {
+    padding-right: calc(20px + clamp(0px, 2vw, 40px));
+  }
+  .writeup-columns .writeup-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18em), 1fr));
+    gap: 1.5em clamp(28px, 3vw, 56px);
+    align-items: start;
+    max-width: none;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .writeup-columns p {
+    margin: 0;
+    padding-left: clamp(20px, 2vw, 32px);
+    border-left: 2px solid #19519a;
+  }
+}
 
 @media (max-width: 720px) {
   .nav-toggle { display: flex; }
