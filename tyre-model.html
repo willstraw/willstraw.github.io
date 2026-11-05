@@ -80,14 +80,43 @@
     </div>
   </nav>
 
-  <!-- Stub page for the tyre model project, linked from its tile on Projects and its sketch on the Home page's
-       Projects sheet. The content goes here. -->
+  <!-- The tyre model project, linked from its tile on Projects and its sketch on the Home page's Projects sheet.
+       The write-up under the plot uses the shared .writeup styles in style.css. -->
   <main id="content">
     <header class="project-hero">
       <img class="project-picture plot" src="media/tyre-model-fy.png" width="1802" height="749"
         alt="Three MATLAB plots of lateral force against slip angle for the Hoosier 43070 16x6-10 LCO tyre on a 7 inch rim at 10 psi, at inclination angles of 0, 2 and 4 degrees, each with curves for normal loads of 200 to 1100 newtons">
       <h1>Pacejka Magic Formula 5.2 Tyre Model</h1>
     </header>
+
+    <section class="writeup">
+      <div class="writeup-body">
+        <p>
+          During the 2026 design cycle I built a tyre model for my university’s FSAE team. The model is written in
+          MATLAB and uses the Pacejka Magic Formula, specifically the PAC2002 version, or MF 5.2, and is fitted to test
+          data from the FSAE Tire Test Consortium at Calspan. An older model of ours was very limited: it only covered
+          cornering force, didn’t include camber and provided very few outputs. My rebuilt model covers lateral force,
+          longitudinal force and combined slip, all with camber, across a variety of pressures.
+        </p>
+        <p>
+          The hardest part was combined slip analysis, which looks at how much grip the tyre loses when it’s braking or
+          accelerating while it’s also cornering, or vice versa. The drive and brake tests only used positive slip
+          angles of 0, 3 and 6 degrees, which isn’t enough to model a tyre accurately. My first model matched the data
+          almost perfectly, but a second look at the test points showed clear issues. Longitudinal force was three
+          times stronger in one direction of cornering than the other, and past about 14 degrees of slip angle, braking
+          actually pushed the tyre forwards (I’m still not sure how I managed that). This was fixed by holding the
+          terms the data couldn’t support at zero and adding limits that keep the curves physically capped, at almost
+          no cost in accuracy.
+        </p>
+        <p>
+          The biggest thing I learned is that a good <i>R</i>² doesn’t immediately mean a good model. My fits were all
+          between about 0.97 and 0.999, but that only tells you the model matches the data where there is data to
+          match. A lap sim, for example, uses the model everywhere. Taking the testing conditions into account was
+          just as important. The test belt is like sandpaper, gripping more than any real track would. The next step
+          is to correlate the model against our own track data and work out how much to scale the grip down.
+        </p>
+      </div>
+    </section>
   </main>
 </body>
 </html>

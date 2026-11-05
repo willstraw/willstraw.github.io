@@ -193,6 +193,27 @@ html::-webkit-scrollbar {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
+/* The write-up under a project page's picture, for any project page to use. It's lettered like the Home intro: Space
+   Grotesk in the intro's grey, lined up with the nav name on the left (16px plus --name-inset), and on desktop with
+   the intro's blueprint-blue rule down its left edge. Its width is capped at about 75 characters a line so it stays
+   easy to read on wide screens. */
+.writeup {
+  padding: clamp(32px, 5vw, 64px) 16px 64px calc(16px + var(--name-inset));
+  font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+  font-size: clamp(16px, 1.25vw, 19px);
+  line-height: 1.65;
+  color: #3a3e45;
+}
+.writeup-body { max-width: 42em; }
+.writeup p { margin: 0 0 1.1em; }
+.writeup p:last-child { margin-bottom: 0; }
+@media (min-width: 721px) {
+  .writeup-body {
+    padding-left: clamp(20px, 2vw, 32px);
+    border-left: 2px solid #19519a;
+  }
+}
+
 @media (max-width: 720px) {
   .nav-toggle { display: flex; }
   .nav-title { display: block; }
