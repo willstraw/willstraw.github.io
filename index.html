@@ -873,7 +873,8 @@
     }
     /* A paragraph beside the headshot (under it on phones), placed by the script, fading in with the headshot's cross.
        On desktop its top lines up with the headshot's and its left edge with the title block's, and its width is
-       capped at about 70 characters a line so it stays easy to read. Its text is a placeholder to replace. */
+       capped at about 70 characters a line so it stays easy to read. Where it's too long for its box, the script
+       first makes the text smaller, and if it still doesn't fit at the smallest size, adds .scrolls (see below). */
     .sheet-text {
       position: absolute;
       margin: 0;
@@ -893,6 +894,29 @@
         line-height: 1.5;
       }
     }
+    /* A paragraph that's still too long scrolls inside its box, like the timeline's panel, with the same fade along
+       the bottom while there's more below (.more). The sheet ignores the pointer, so only a paragraph that scrolls
+       takes it back, and only once it has fully faded in (.shown); one that fits leaves the wheel and swipes to the
+       page's scroll drawing. */
+    .sheet-text.scrolls {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #b9bec6 transparent;
+    }
+    .sheet-text.scrolls.shown { pointer-events: auto; }
+    .sheet-text.scrolls::after {
+      content: "";
+      position: sticky;
+      bottom: 0;
+      display: block;
+      height: 36px;
+      margin-top: -36px;
+      background: linear-gradient(rgba(255, 255, 255, 0), #fff);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+    }
+    .sheet-text.more::after { opacity: 1; }
     .sheet .dim { --dim-colour: #111; }
 
     /* Fast travel between the sheets: a mini drawing sheet for each one with its name under it, and an arrow under
@@ -1332,8 +1356,16 @@
     <a class="sheet-cv" href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
 
     <p class="sheet-text">
-      Placeholder paragraph. A few sentences about yourself go here, beside the headshot: who you are, what you work on
-      and what you'd like to do next.
+      To properly introduce myself, I’m Will. I’m a current undergraduate student studying mechanical engineering, and
+      for as long as I can remember (as cliché as it sounds) I’ve wanted to be an engineer. Conceptualisation, problem
+      solving, design, iteration, testing, manufacturing – every step along the way I live and breathe for. I’m asked
+      quite often what I study at university, and when I answer engineering, I always add that I couldn’t do anything
+      else: not in a literal sense, but in that I couldn’t see myself doing anything but this. I love motorsport and
+      have been surrounded by cars my entire life. Growing up in Melbourne, being taken out of school to go to the
+      Grand Prix as a kid gave me some of my fondest memories. Now, getting the opportunity not only to work on but to
+      design, and see come to life, parts for a real formula-style car is a dream come true, and just the beginning. A
+      dream of mine would be to work in F1 someday, and this website is just one of the things along the way that I
+      hope will help get me there. Have a look around, and I hope you enjoy it!
     </p>
 
     <!-- Each link's .look-nav text must match the nav link it takes over from (the script pairs them by href) -->
@@ -2369,7 +2401,32 @@
           width: `${inner}px`,
           height: `${Math.max(index.offsetTop - 16 - textTop, 0)}px`,
         });
+        fitText();
       }
+
+      // Fits the About Me paragraph into the box the layout gave it. Starting from its stylesheet size, the text steps
+      // down half a pixel at a time until it fits, but no smaller than TEXT_MIN. If it still doesn't fit there, it
+      // scrolls inside the box instead (.scrolls), and .more fades the bottom edge while there's more below.
+      const TEXT_MIN = 14;
+      function fitText() {
+        text.style.fontSize = '';
+        text.classList.remove('scrolls', 'more');
+        let size = parseFloat(getComputedStyle(text).fontSize);
+        while (text.scrollHeight > text.clientHeight + 1 && size > TEXT_MIN) {
+          size = Math.max(size - 0.5, TEXT_MIN);
+          text.style.fontSize = `${size}px`;
+        }
+        if (text.scrollHeight > text.clientHeight + 1) {
+          text.classList.add('scrolls');
+          text.scrollTop = 0;
+          markTextMore();
+        }
+      }
+      function markTextMore() {
+        text.classList.toggle('more', text.classList.contains('scrolls') &&
+          text.scrollTop + text.clientHeight < text.scrollHeight - 1);
+      }
+      text.addEventListener('scroll', markTextMore, { passive: true });
 
       // Where the word ends up: in the top-left corner at 70% of its size, leaving room above and to the left for its
       // dimensions. The headshot box then fills the space below it, down to just above the parts list, at a 3:4
@@ -2411,6 +2468,7 @@
           width: `${titleBlock.offsetWidth - 48}px`,
           height: `${Math.max(titleBlock.offsetTop - 40 - shotTop, 0)}px`,
         });
+        fitText();
 
         // The fast-travel index sits above the paragraph, ending 28px above it, and fits up to 48px short of the border
         placeIndex(indexLeft, shotTop - 28, stage.clientWidth - margin - 48 - indexLeft, 56, 96);
@@ -2571,6 +2629,9 @@
         // Set on the sheet so the paragraph fades in with the headshot's photo, and the index with them
         sheet.style.setProperty('--shot-x', shotFill);
         index.style.setProperty('--shot-x', shotFill);
+        // A paragraph that scrolls only takes the pointer once it has fully faded in, so the wheel can't catch on it
+        // while it's still unseen
+        text.classList.toggle('shown', shotFill >= 1);
         index.style.visibility = shotFill > 0 ? 'visible' : 'hidden';
         if (body) {
           body.material.color.lerpColors(FACE, WHITE, ink);
@@ -2656,6 +2717,9 @@
       sizes.observe(stage);
       sizes.observe(band);
       phone.addEventListener('change', refresh);
+      // Space Grotesk can arrive after the first layout, and how much text fits in each box depends on it, so lay
+      // out again once it has
+      document.fonts?.ready.then(refresh);
       window.addEventListener('scroll', readScroll, { passive: true });
 
       // Fast travel: jump the scroll straight to the sheet's resting place. The shown position then eases there, so
