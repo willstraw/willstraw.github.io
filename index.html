@@ -567,11 +567,30 @@
       object-fit: cover;
       display: block;
     }
+    /* Text that's longer than the room under the timeline (on shorter screens and phones) scrolls inside the panel
+       rather than being cut off, with a thin scrollbar. While there's more below what shows, the script adds .more,
+       which fades the bottom edge to hint at it. The fade is stuck to the bottom of the box, and its negative margin
+       stops it adding to the text's height. */
     .tl-detail-text {
       min-width: 0;
       max-width: 60ch;
-      overflow: hidden;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #b9bec6 transparent;
     }
+    .tl-detail-text::after {
+      content: "";
+      position: sticky;
+      bottom: 0;
+      display: block;
+      height: 36px;
+      margin-top: -36px;
+      background: linear-gradient(rgba(255, 255, 255, 0), #fff);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+    }
+    .tl-detail-text.more::after { opacity: 1; }
     .tl-detail h3 {
       margin: 0 0 10px;
       font-size: 13px;
@@ -587,7 +606,8 @@
       line-height: 1.55;
       color: #2a2d33;
     }
-    /* On phones the picture goes on top, full width, and the text under it */
+    /* On phones the picture goes on top, full width, and the text under it. The picture keeps to 40% of the panel so
+       the text gets most of it. */
     @media (max-width: 720px) {
       .tl-detail {
         flex-direction: column;
@@ -596,7 +616,7 @@
       .tl-detail-picture {
         width: 100%;
         height: auto;
-        max-height: 55%;
+        max-height: 40%;
       }
     }
 
@@ -1432,10 +1452,10 @@
       <span class="timeline-end">Future</span>
 
       <div class="tl-span" data-from="2025.92" data-to="2026.8">
-        <span class="dim dim-x"><span class="dim-line"></span><button type="button" class="dim-value" data-image="media/timeline-design-cycle.jpg" data-alt="The VD26 rear suspension assembly open in Autodesk Fusion: both rockers, dampers and the anti-roll bar">2026 FSAE<br>design cycle</button></span>
+        <span class="dim dim-x"><span class="dim-line"></span><button type="button" class="dim-value" data-image="media/timeline-design-cycle.jpg" data-alt="The VD26 rear suspension assembly open in Autodesk Fusion: both rockers, dampers and the anti-roll bar" data-text="Our team has a one-year design cycle. Towards the end of one year and at the beginning of the next, we conceptualise and evaluate designs for the coming year, before collaborating with the other subteams on a fully settled design for this cycle. Each subteam’s design depends on the others’, so this first step of communicating the direction or philosophy of the car for the coming year, before any actual designing is done, is vital.">2026 FSAE<br>design cycle</button></span>
       </div>
-      <button type="button" class="tl-event" data-at="2025.67" data-image="media/timeline-joined-fsae.jpg" data-position="50% 56%" data-alt="Melbourne University Racing team members working on the car under a marquee at a track day, with its dampers, cooling fans and Hoosier tyres in view">Joined FSAE team</button>
-      <button type="button" class="tl-event" data-at="2026.82">System head position</button>
+      <button type="button" class="tl-event" data-at="2025.67" data-image="media/timeline-joined-fsae.jpg" data-position="50% 56%" data-alt="Melbourne University Racing team members working on the car under a marquee at a track day, with its dampers, cooling fans and Hoosier tyres in view" data-text="This picture is actually from my very first track day with the team, which was also the very first track day of the M25, our 2025 car. It was some of my first hands-on experience with an FSAE car, and I definitely learnt a lot that day. The process of joining the team started with a basic application, followed by a case study on a set of tyre data we were given, where we were tasked with extracting some key parameters and evaluating their effects on vehicle dynamics design. This would prove to be very important in my later projects.">Joined FSAE team</button>
+      <button type="button" class="tl-event" data-at="2026.82" data-text="It was an honour to be asked to lead the vehicle dynamics subteam going into 2027. This role takes on a whole new group of responsibilities and challenges compared to being a regular engineer, but it gives me a whole new area to grow into. I hope by the end I will look back and think ‘what was I doing at the start?’, because then I will know I’ve grown from where I am now.">System head position</button>
       <!-- 6 December 2026 -->
       <button type="button" class="tl-event" data-at="2026.93">FSAE 2026 competition</button>
       <button type="button" class="tl-project" data-at="2027.02">Undergraduate graduation</button>
@@ -1445,11 +1465,11 @@
 
       <!-- Projects, under the line -->
       <div class="tl-span under" data-from="2025.98" data-to="2026.72">
-        <span class="dim dim-x"><span class="dim-line"></span><button type="button" class="dim-value" data-image="media/timeline-tyre-model.png" data-fit="contain" data-background="#fff" data-alt="MATLAB plot of the traction circle for the Hoosier 43100 18.0x6.0-10 R20 tyre on a 6 inch rim at 10 psi: longitudinal against lateral force for normal loads of 200 to 1100 newtons">Tyre model</button></span>
+        <span class="dim dim-x"><span class="dim-line"></span><button type="button" class="dim-value" data-image="media/timeline-tyre-model.png" data-fit="contain" data-background="#fff" data-alt="MATLAB plot of the traction circle for the Hoosier 43100 18.0x6.0-10 R20 tyre on a 6 inch rim at 10 psi: longitudinal against lateral force for normal loads of 200 to 1100 newtons" data-text="Following on from my application task, I was asked after joining the team to work on the creation of a tyre model: a tool for the team to simulate tyre behaviour under varying dynamics, which can be built into car simulations and also helps with design choices around tyres without our having to test them ourselves. More about it is on the Projects page.">Tyre model</button></span>
       </div>
       <!-- Halfway through the 2026 design cycle -->
-      <button type="button" class="tl-project" data-at="2026.36" data-image="media/timeline-rear-suspension.jpg" data-fit="contain" data-background="#2e3440" data-alt="Render of the VD26 rear suspension assembly in Fusion: both rockers and dampers, the anti-roll bar and the toe links, on a dark grid">Rear suspension</button>
-      <button type="button" class="tl-project" data-at="2026.8" data-image="media/timeline-cyberstar.png" data-fit="contain" data-alt="The Visual Studio Code logo, the editor CyberStar was built in">CyberStar</button>
+      <button type="button" class="tl-project" data-at="2026.36" data-image="media/timeline-rear-suspension.jpg" data-fit="contain" data-background="#2e3440" data-alt="Render of the VD26 rear suspension assembly in Fusion: both rockers and dampers, the anti-roll bar and the toe links, on a dark grid" data-text="The rear suspension was the collection of components I was responsible for during this year’s design cycle. I had never designed a fully functioning system like this before, and from my CAD habits to my design direction I sure had a lot to learn, and I did! Looking back on it now I almost cringe at some of what I was doing, but I’m proud of that, as I know I have grown as an engineer.">Rear suspension</button>
+      <button type="button" class="tl-project" data-at="2026.8" data-image="media/timeline-cyberstar.png" data-fit="contain" data-alt="The Visual Studio Code logo, the editor CyberStar was built in" data-text="CyberStar was a class I took in my third year of university, focused on website design. From the physical design presentation itself to coding and hosting your website, this class was a whole new world for me, coming from a different side of engineering, but it’s responsible for where this very site came from! My third and final assignment for it is this website itself. A bit meta, if you ask me.">CyberStar</button>
       <span class="tl-project tl-now">Now</span>
     </div>
 
@@ -1533,8 +1553,10 @@
       </div>
       <div class="projects-text">
         <p>
-          Placeholder paragraph. A few sentences about the projects go here: what they have in common, how they
-          fit into the car and what each sketch either side of this shows.
+          A collection of things I’ve designed, analysed and built, from race car components to coursework and
+          personal experiments. Each drawing links to the full page: what I set out to do, how I did it, and what I’d
+          do differently next time. Not all of them are finished, but the ones currently being worked on might just
+          have some of the most genuine work.
         </p>
       </div>
       <div class="projects-side">
@@ -1781,6 +1803,14 @@
         const CROSS = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
           '<path d="M0 0L100 100M100 0L0 100" vector-effect="non-scaling-stroke"/></svg>';
         const picture = detail.querySelector('.tl-detail-picture');
+        // The panel's text scrolls when it's longer than the room it has. While there's more below what shows, .more
+        // fades its bottom edge. That's checked as it scrolls, when its size changes (the layout sets its height on
+        // desktop) and whenever an item opens.
+        const detailText = detail.querySelector('.tl-detail-text');
+        const markMore = () => detailText.classList.toggle('more',
+          detailText.scrollTop + detailText.clientHeight < detailText.scrollHeight - 1);
+        detailText.addEventListener('scroll', markMore, { passive: true });
+        new ResizeObserver(markMore).observe(detailText);
         // Things still to come (dated after today, or for a span, starting after it) have nothing to show yet, so
         // their buttons are turned off and drawn in plain ink. They come on by themselves once their date passes.
         const now = yearNow();
@@ -1806,6 +1836,9 @@
             // The label as one line, for the heading
             detail.querySelector('h3').textContent = button.innerText.replace(/\s+/g, ' ');
             detail.querySelector('p').textContent = button.dataset.text || PLACEHOLDER_TEXT;
+            // Each item's text starts from its top, whatever the last one was scrolled to
+            detailText.scrollTop = 0;
+            markMore();
             if (button.dataset.image) {
               const img = document.createElement('img');
               img.src = button.dataset.image;
