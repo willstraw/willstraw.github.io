@@ -1,0 +1,2639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="nav.js" defer></script>
+  <link rel="stylesheet" href="viewer.css">
+  <style>
+    /* The scroll drawing. The first screen (.home-stage) stays pinned while .home-scroll gives it room to scroll, and
+       the script at the end of the page turns that scrolling into an animation. The nav, intro and ViewCube fade,
+       WELCOME turns front on as the grid fades, and then the page becomes an engineering drawing of it: a landscape
+       sheet on desktop and a portrait one on phones. That sheet (About Me) is the top of a stack of four, and scrolling
+       on slides each one off the stack to the left to show the next.
+       The script sets .home-scroll's height (it works out how much scrolling each part needs), so if it fails to load
+       the page is just the first screen. */
+    /* The stage is a column that fills the screen: the nav, then .viewer-band stretching to take whatever height the
+       nav and intro leave, then the intro. So the intro always sits at the bottom with just #content's bottom padding
+       under it. */
+    .home-stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    /* The band marks where the viewer used to be, and the script tells viewer.js to centre the word in it.
+       It is at least 240px tall (180px on phones), and at most 75vh so it doesn't tower on tall monitors. */
+    .viewer-band {
+      flex: 1 0 auto;
+      min-height: 240px;
+      max-height: 75vh;
+      position: relative;
+      z-index: 1;
+      pointer-events: none;
+    }
+    @media (max-width: 720px) {
+      /* The small viewport height, so the stage doesn't run under the browser's toolbars */
+      .home-stage { height: 100svh; }
+      .viewer-band { min-height: 180px; }
+      /* .home-stage makes these win over the #content rule further down */
+      .home-stage #content {
+        min-height: 0;
+        padding-bottom: 28px;
+      }
+    }
+    /* The viewer's canvas covers the whole stage, so the word can move anywhere on it during the animation.
+       The band takes over the viewer's bottom fade (the same gradient as viewer.css), with solid page colour below
+       it so the canvas doesn't show under the intro. */
+    .viewer-band::before,
+    .viewer-band::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+    }
+    .viewer-band::before {
+      top: 72%;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(244, 244, 244, 0) 0%, rgba(244, 244, 244, 0.45) 60%, #f4f4f4 100%);
+    }
+    .viewer-band::after {
+      top: 100%;
+      height: 100vh;
+      background: #f4f4f4;
+    }
+    #viewer {
+      position: absolute;
+      inset: 0;
+      height: auto;
+      min-height: 0;
+      background: none;
+    }
+    #viewer.viewer-fade::after { display: none; }
+    /* Keeps the ViewCube where it was, just below the nav (viewer.css puts it 34px down, or 20px on phones) */
+    #viewer .viewcube-wrap { top: calc(var(--nav-height) + 2px + 34px); }
+    @media (max-width: 720px) {
+      #viewer .viewcube-wrap { top: calc(var(--nav-height) + 2px + 20px); }
+    }
+    #content {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Space reserved for text below the viewer */
+    /* The small negative top margin lifts the whole intro (heading and text) a little closer to the viewer */
+    #content {
+      margin-top: -8px;
+      min-height: 40vh;
+      padding: 0 16px 32px;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+      color: #111;
+    }
+
+    /* The heading and intro text across the full width. --title-size is the heading's size. */
+    .intro {
+      --title-size: clamp(48px, 7vw, 128px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+    }
+    /* The negative top margin pulls the heading up a little over the faded bottom of the viewer. Positioning it makes
+       it paint above the viewer's fade. */
+    .intro-title {
+      position: relative;
+      margin: -0.2em 0 0.3em;
+      font-size: var(--title-size);
+      font-weight: 700;
+      line-height: 0.9;
+      letter-spacing: -0.01em;
+    }
+    /* Engineering-drawing dimensions, used on the drawing sheets (the word's size, the index's mini sheets and the
+       timeline's spans). Thin extension lines stop a little short of what's measured, the dimension line has filled
+       arrowheads, and the size sits above the line. */
+    .dim {
+      --dim-colour: #4a4f57;
+      position: absolute;
+      color: var(--dim-colour);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    /* The dimension line itself is drawn as a border, like the extension lines, rather than a 1px filled box. Browsers
+       snap borders to whole screen pixels, so at display scalings like 150% every line comes out the same thickness;
+       a 1px box there can land on one screen pixel or two depending on where it falls. */
+    .dim-line { position: absolute; }
+    .dim-line::before,
+    .dim-line::after {
+      content: "";
+      position: absolute;
+      background: currentColor;
+    }
+    /* Width, across the top. The box's left and right borders are the extension lines, starting 4px above what's
+       measured and running 6px past the dimension line. */
+    .dim-x {
+      left: 0;
+      right: 0;
+      bottom: calc(100% + 4px);
+      height: 26px;
+      border: solid var(--dim-colour);
+      border-width: 0 1px;
+    }
+    .dim-x .dim-line { left: 0; right: 0; top: 6px; border-top: 1px solid currentColor; }
+    /* The arrowheads sit inside the line's border, so -4px centres their 7px on the 1px line */
+    .dim-x .dim-line::before,
+    .dim-x .dim-line::after { top: -4px; width: 10px; height: 7px; }
+    .dim-x .dim-line::before { left: 0; clip-path: polygon(0 50%, 100% 0, 100% 100%); }
+    .dim-x .dim-line::after { right: 0; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+    .dim-x .dim-value {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% - 3px);
+      transform: translateX(-50%);
+    }
+    /* Height, down the left side, reading from bottom to top */
+    .dim-y {
+      top: 0;
+      bottom: 0;
+      right: calc(100% + 4px);
+      width: 26px;
+      border: solid var(--dim-colour);
+      border-width: 1px 0;
+    }
+    .dim-y .dim-line { top: 0; bottom: 0; left: 6px; border-left: 1px solid currentColor; }
+    .dim-y .dim-line::before,
+    .dim-y .dim-line::after { left: -4px; width: 7px; height: 10px; }
+    .dim-y .dim-line::before { top: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+    .dim-y .dim-line::after { bottom: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+    .dim-y .dim-value {
+      position: absolute;
+      top: 50%;
+      right: calc(100% - 3px);
+      writing-mode: vertical-rl;
+      transform: translateY(-50%) rotate(180deg);
+    }
+    /* Phones leave the dimensions out (the index's mini sheets, for one, are too small for them). The sheets that keep
+       theirs bring them back further down. */
+    @media (max-width: 720px) {
+      .dim { display: none; }
+    }
+
+    /* On desktop the heading and text sit side by side, with the scroll cue at the right. The heading's
+       column is only as wide as the heading, and the text takes what's left. On phones they stack, heading first. */
+    @media (min-width: 721px) {
+      /* The left padding matches the nav name's (16px plus --name-inset), so the heading lines up under the name.
+         The right matches the nav links' (16px, plus their 2vw and 4px), so the scroll cue ends under the last link. */
+      #content {
+        min-height: 0;
+        padding: 0 calc(20px + clamp(0px, 2vw, 40px)) 40px calc(16px + var(--name-inset));
+      }
+      .intro-copy {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr) max-content;
+        gap: clamp(32px, 5vw, 96px);
+        align-items: start;
+      }
+      /* The small negative left margin cancels the space Space Grotesk leaves before the "H", so its stroke lines up
+         with the name's "W" rather than its letter box */
+      .intro-title { margin: -0.2em 0 0 -0.06em; }
+    }
+
+    /* A thin blueprint-blue rule down the left of the text, the same blue as the nav */
+    .intro-text {
+      margin: 0;
+      font-size: clamp(17px, 1.5vw, 24px);
+      /* Room between lines for the bold phrases' underline */
+      line-height: 1.6;
+      color: #3a3e45;
+    }
+    @media (min-width: 721px) {
+      /* The top margin lifts the text so the rule starts level with the tops of the heading's capitals, which sit 0.17
+         of the heading's size above the row. The width is capped at about 75 characters a line so it stays easy to read
+         on wide screens, and the text keeps to the left, beside the heading. Like the heading, it is positioned so it
+         paints above the viewer's fade. */
+      .intro-text {
+        position: relative;
+        justify-self: start;
+        max-width: 40em;
+        margin-top: calc(var(--title-size) * -0.17);
+        padding-left: clamp(20px, 2vw, 32px);
+        border-left: 2px solid #19519a;
+      }
+    }
+    .intro-text strong {
+      font-weight: 700;
+      color: #111;
+      text-decoration: underline;
+      text-decoration-color: #19519a;
+      text-decoration-thickness: 0.07em;
+      text-underline-offset: 0.28em;
+    }
+
+    /* Scroll cue at the right of the intro, drawn like a view arrow from an engineering drawing: a dash-dot centre line
+       running down into a filled arrowhead, with the note "SCROLL TO NEXT PAGE" under it. It's lettered in Arial like
+       the drawing sheet. It's only for the desktop scroll drawing, so it shows once that script has started (it adds
+       .scroll-drawing), and it fades out with the rest of the intro. It starts level with the text's rule and runs the
+       full height of the text. */
+    .scroll-cue { display: none; }
+    @media (min-width: 721px) {
+      .scroll-drawing .scroll-cue {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        align-self: stretch;
+        margin-top: calc(var(--title-size) * -0.17);
+        position: relative;
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+        color: #2a2d33;
+      }
+    }
+    /* The centre line's long dash, gap, short dash, gap pattern repeats every 24px. The strip inside is one repeat
+       taller than the track and slides down by exactly one repeat, so the loop has no visible jump. Only transform
+       animates, so it stays cheap. */
+    .scroll-cue-line {
+      flex: 1;
+      position: relative;
+      width: 2px;
+      min-height: 32px;
+      overflow: hidden;
+    }
+    .scroll-cue-line::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -24px;
+      bottom: 0;
+      background: repeating-linear-gradient(180deg,
+        currentColor 0 13px, transparent 13px 17px, currentColor 17px 20px, transparent 20px 24px);
+      animation: scroll-cue-run 1.4s linear infinite;
+    }
+    @keyframes scroll-cue-run {
+      to { transform: translateY(24px); }
+    }
+    /* A long, narrow filled arrowhead, as on a view or section arrow */
+    .scroll-cue-head {
+      width: 12px;
+      height: 18px;
+      background: currentColor;
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+    .scroll-cue-note {
+      margin-top: 10px;
+      font-size: 11px;
+      line-height: 1.35;
+      letter-spacing: 0.08em;
+      text-align: center;
+      white-space: nowrap;
+    }
+    /* Without motion, the centre line just stays still */
+    @media (prefers-reduced-motion: reduce) {
+      .scroll-cue-line::before { animation: none; }
+    }
+
+    /* ---------- The engineering drawing at the end of the scroll ----------
+       White paper fades in over the page colour, then the sheet: a border with zone numbers and letters, centre marks,
+       a parts list and a title block, laid out like an ISO A3 drawing sheet. Phones get a portrait sheet with just the
+       border and zones, and a paragraph under the headshot instead. The script sets --draw (the border drawing itself
+       on), --marks and --block (fading in the zones and the tables) and --dims (the word's dimensions). */
+    /* Gap from the screen edge to each drawing's border. The script reads it to place things, so keep it in px. */
+    .home-stage { --m: 28px; }
+    @media (max-width: 720px) {
+      .home-stage { --m: 22px; }
+    }
+    /* The paper's shadow only shows once it slides off the stack to the left, along its right edge */
+    .paper {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      box-shadow: 10px 0 28px rgba(0, 0, 0, 0.18);
+    }
+    /* A deeper, softer shadow that fades in (--lift, set by the script) as a sheet is lifted off the stack before it
+       slides. Fading this layer in costs much less than animating the shadow itself. */
+    .paper::after,
+    .sheet-page::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      box-shadow: 22px 0 56px rgba(0, 0, 0, 0.3);
+      opacity: var(--lift, 0);
+      pointer-events: none;
+    }
+    .sheet {
+      position: absolute;
+      inset: 0;
+      /* Above the nav (z-index 10), so the notes' links can sit over the nav's links while it fades. The sheet itself
+         ignores the pointer and stays hidden until it draws, so it never covers the nav or its phone menu. */
+      z-index: 11;
+      visibility: hidden;
+      pointer-events: none;
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+      color: #111;
+    }
+    /* The other sheets in the stack (Timeline, Projects, FAQ), built by the script from the About Me sheet's frame,
+       title block and notes, all fully drawn. They sit under the About Me sheet and show once it starts to slide away. */
+    .sheet-page {
+      position: absolute;
+      inset: 0;
+      /* Keeps everything on the sheet (like its index's z-index) inside it, so nothing shows through the sheet above */
+      isolation: isolate;
+      visibility: hidden;
+      background: #fff;
+      box-shadow: 10px 0 28px rgba(0, 0, 0, 0.18);
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+      color: #111;
+      --draw: 1;
+      --marks: 1;
+      --block: 1;
+      --morph: 1;
+      --notes: 1;
+    }
+    .sheet-page .note-link { visibility: inherit; }
+    /* The sheet's name in the top-left corner, like a view label, until it has content of its own */
+    .sheet-page-label {
+      position: absolute;
+      left: calc(var(--m) + 64px);
+      top: calc(var(--m) + 56px);
+      margin: 0;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+    }
+    /* The Timeline sheet's arrow: a line with a tick at the start of each year and an arrowhead pointing on into the
+       future. The line is a border, like the dimension lines, so it stays sharp at any display scaling. Its middle is
+       1px down from the top of .timeline, and everything below is centred on that. The script sets the timeline's
+       left, top and width, and places the years, the break, the flags and the spans along it. */
+    .timeline {
+      position: absolute;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .timeline-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      border-top: 2px solid #111;
+    }
+    /* The arrowhead, centred on the 2px line, which sits just above the line's own box */
+    .timeline-line::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: -7px;
+      width: 17px;
+      height: 12px;
+      background: #111;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+    .timeline-end {
+      position: absolute;
+      right: 0;
+      top: 16px;
+      white-space: nowrap;
+    }
+    /* Each year's number sits under the line, centred on its tick */
+    .tl-year {
+      position: absolute;
+      top: 16px;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+    .tl-year::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -21px;
+      width: 2px;
+      height: 12px;
+      margin-left: -1px;
+      background: #111;
+    }
+    /* Things that happened at one time are flags: a dot on the line, and a leader out to the far edge of the label
+       beside it. Events stand above the line and projects hang below it. The script sets each label's left and top,
+       and --h, how far its far edge is from the line, so the leader and dot reach back to the line. */
+    .tl-event,
+    .tl-project {
+      position: absolute;
+      width: max-content;
+      line-height: 1.25;
+    }
+    .tl-event::before,
+    .tl-event::after,
+    .tl-project::before,
+    .tl-project::after {
+      content: "";
+      position: absolute;
+    }
+    .tl-event::before,
+    .tl-project::before {
+      left: -6px;
+      height: var(--h);
+      border-left: 1px solid #111;
+    }
+    .tl-event::before { top: 0; }
+    .tl-project::before { bottom: 0; }
+    .tl-event::after,
+    .tl-project::after {
+      left: -8px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #111;
+    }
+    .tl-event::after { top: calc(var(--h) - 2.5px); }
+    .tl-project::after { bottom: calc(var(--h) - 2.5px); }
+    /* A label the script has moved to the left of its leader, where that lets it sit closer to the line */
+    .tl-event.flip,
+    .tl-project.flip { text-align: right; }
+    .tl-event.flip::before,
+    .tl-project.flip::before { left: auto; right: -7px; }
+    .tl-event.flip::after,
+    .tl-project.flip::after { left: auto; right: -9px; }
+    /* Today is an underside flag too, with an arrowhead just under the line pointing up at it in place of the dot,
+       like the one under the current sheet's name in the index. Its leader starts from the arrowhead. */
+    .tl-now::before { height: calc(var(--h) - 12px); }
+    .tl-now::after {
+      left: -10.5px;
+      bottom: calc(var(--h) - 12px);
+      width: 10px;
+      height: 8px;
+      border-radius: 0;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+    .tl-now.flip::after { right: -11.5px; }
+    /* Spans of time are drawn as dimensions above the line, using the dimension styles from the picture, in black.
+       The script sets each span's left and width. */
+    .tl-span {
+      position: absolute;
+      top: 0;
+      height: 2px;
+    }
+    .timeline .dim {
+      --dim-colour: #111;
+      display: block;
+      font-size: inherit;
+      font-weight: 400;
+      letter-spacing: inherit;
+    }
+    .tl-span .dim-value {
+      line-height: 1.25;
+      text-align: center;
+    }
+    /* The labels are buttons, in the link blue used across the sheet, turning orange on hover and staying orange
+       (leader, dot and all) while their panel is open. The script adds .on to the open one's flag or span. The
+       button's own look is reset so it matches the lettering around it. Line height is left to the label styles. */
+    .timeline button {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      text-align: inherit;
+      color: #2b69f7;
+      cursor: pointer;
+      transition: color 0.15s ease-out;
+    }
+    /* The dimension it sits in ignores the pointer, so its text has to ask for it back */
+    .timeline .dim-value { pointer-events: auto; }
+    @media (hover: hover) {
+      .timeline button:not(:disabled):hover { color: #d97946; }
+    }
+    /* Things still to come can't be opened yet (the script turns their buttons off), so they're in plain ink */
+    .timeline button:disabled {
+      color: #111;
+      cursor: default;
+    }
+    .tl-event.on,
+    .tl-project.on,
+    .tl-span.on .dim-value { color: #d97946; }
+    .tl-event.on::before,
+    .tl-project.on::before { border-color: #d97946; }
+    .tl-event.on::after,
+    .tl-project.on::after { background: #d97946; }
+    .tl-span.on .dim { --dim-colour: #d97946; }
+
+    /* The clicked item's panel: its picture on the left and its name and text beside it. The script sets where it
+       sits and how big it is, under the timeline and above the title block and notes. The picture is a crossed box
+       like the headshot's until there's a real one. */
+    .tl-detail {
+      position: absolute;
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      box-sizing: border-box;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.2s ease-out, visibility 0s linear 0.2s;
+    }
+    .tl-detail.open {
+      visibility: inherit;
+      opacity: 1;
+      transition: opacity 0.2s ease-out;
+    }
+    .tl-detail-picture {
+      position: relative;
+      flex: none;
+      box-sizing: border-box;
+      height: 100%;
+      aspect-ratio: 4 / 3;
+      border: 1px solid #111;
+      overflow: hidden;
+    }
+    .tl-detail-picture svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      stroke: #111;
+      stroke-width: 0.75;
+    }
+    .tl-detail-picture img {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .tl-detail-text {
+      min-width: 0;
+      max-width: 60ch;
+      overflow: hidden;
+    }
+    .tl-detail h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #d97946;
+    }
+    .tl-detail p {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: #2a2d33;
+    }
+    /* On phones the picture goes on top, full width, and the text under it */
+    @media (max-width: 720px) {
+      .tl-detail {
+        flex-direction: column;
+        gap: 12px;
+      }
+      .tl-detail-picture {
+        width: 100%;
+        height: auto;
+        max-height: 55%;
+      }
+    }
+
+    /* The FAQ sheet: numbered questions in the drawing's lettering, spaced down the sheet, each ending in a
+       link-blue triangle (orange on hover) that turns down while its answer is open. The script sets the list's
+       left, top and width, and --faq-font and --faq-pad, its questions' text size and the space above and below
+       each, so it fills the open part of the sheet with room left for an answer. */
+    .faq {
+      position: absolute;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .faq-q {
+      margin: 0;
+      font: inherit;
+    }
+    .faq-q button {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8em;
+      width: 100%;
+      margin: 0;
+      padding: var(--faq-pad, 16px) 4px;
+      border: 0;
+      background: none;
+      font-family: inherit;
+      font-size: var(--faq-font, 18px);
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-align: left;
+      color: #111;
+      cursor: pointer;
+    }
+    .faq-n {
+      flex: none;
+      width: 2ch;
+    }
+    .faq-text { flex: 1; }
+    .faq-arrow {
+      flex: none;
+      align-self: center;
+      width: 0.6em;
+      height: 0.7em;
+      background: #2b69f7;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+      transition: transform 0.2s ease-out, background-color 0.15s ease-out;
+    }
+    .faq-q button[aria-expanded="true"] .faq-arrow { transform: rotate(90deg); }
+    @media (hover: hover) {
+      .faq-q button:hover .faq-arrow { background: #d97946; }
+    }
+    /* The answer lines up with the question's text, past its number, a little smaller than the question */
+    .faq-a {
+      padding: 0 4px var(--faq-pad, 16px) calc(4px + 2ch + 0.8em);
+      font-size: var(--faq-font, 18px);
+    }
+    .faq-a:not([hidden]) { animation: faq-open 0.2s ease-out; }
+    .faq-a p {
+      max-width: 70ch;
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+      font-size: 0.95em;
+      line-height: 1.55;
+      color: #2a2d33;
+    }
+    @keyframes faq-open {
+      from { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .faq-arrow { transition: none; }
+      .faq-a:not([hidden]) { animation: none; }
+    }
+    @media (max-width: 720px) {
+      .faq-q button { padding-left: 2px; padding-right: 2px; }
+      .faq-a p { line-height: 1.5; }
+    }
+
+    /* The Projects sheet: three equal columns, so the text in the middle has the same space either side of it, and
+       the sketches sit centred in the outer two. Each column runs down its own stretch of open paper (the index and
+       the title block only cover the right of the sheet), so the script sets each one's top margin and height as
+       well as the sheet's left, top, width and height, and how big the sketches are. Phones put the text on top
+       and the sketches in a row under it. */
+    .projects-sheet {
+      position: absolute;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 48px;
+      align-items: start;
+    }
+    .projects-side,
+    .projects-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .projects-side {
+      align-items: center;
+      gap: 16px;
+    }
+    .project-sketch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin: 0;
+    }
+    /* The script sizes each sketch's box, and the drawing fits inside it without stretching. Once a sketch has
+       been put into the page as inline SVG, its annotations (dimensions, notes and view labels, marked
+       "annotation" in the files) are drawn at --annotation, in the drawing's own units, which the script works out
+       so they come out at 10px on screen like the dimensions on the index (where the sketch has room). */
+    .project-sketch img,
+    .project-sketch svg {
+      display: block;
+      max-width: 100%;
+      object-fit: contain;
+    }
+    .project-sketch svg .annotation { font-size: var(--annotation); }
+    .project-sketch figcaption {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    /* Each caption links to its project's page, in the link blue used across the sheet, turning orange on hover */
+    .project-sketch figcaption a {
+      color: #2b69f7;
+      text-decoration: none;
+      transition: color 0.15s ease-out;
+    }
+    @media (hover: hover) {
+      .project-sketch figcaption a:hover { color: #d97946; }
+    }
+    .projects-text p {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+      font-size: clamp(15px, 1.25vw, 20px);
+      line-height: 1.55;
+      color: #2a2d33;
+    }
+    @media (max-width: 720px) {
+      .projects-sheet {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: 24px;
+      }
+      .projects-text { grid-column: 1 / -1; order: -1; }
+      .projects-text p { font-size: 15px; line-height: 1.5; }
+      .project-sketch figcaption { font-size: 11px; }
+    }
+
+    /* Under the line the spans sit below the years and whatever else is in the way, so their extension lines are
+       just short ticks either side of the dimension line, with the text under it. The script sets their top, and
+       takes the text to start 20px below it, clear of the ticks. */
+    .tl-span.under .dim-x {
+      top: 0;
+      bottom: auto;
+      height: 16px;
+    }
+    .tl-span.under .dim-line { top: 7px; }
+    .tl-span.under .dim-value {
+      top: 12px;
+      bottom: auto;
+    }
+    @media (max-width: 720px) {
+      .sheet .title-block,
+      .sheet .sheet-notes,
+      .sheet-page .title-block,
+      .sheet-page .sheet-notes { display: none; }
+      .sheet-page-label { left: calc(var(--m) + 24px); }
+      .timeline { font-size: 11px; }
+      .sheet-frame text { font-size: 10px; }
+      /* Phones hide the dimensions (see .dim), so bring the drawing's back */
+      .sheet .dim { display: block; }
+    }
+
+    .sheet-frame {
+      position: absolute;
+      inset: 0;
+      fill: none;
+      stroke: #111;
+      shape-rendering: crispEdges;
+    }
+    /* pathLength="1" on the border lets the dash offset run from 1 (hidden) to 0 (fully drawn) */
+    .sheet-frame .draw {
+      stroke-width: 1.5;
+      stroke-dasharray: 1;
+      stroke-dashoffset: calc(1 - var(--draw, 0));
+    }
+    .sheet-frame .marks { opacity: var(--marks, 0); }
+    .sheet-frame .trim {
+      stroke-width: 0.75;
+      stroke-opacity: 0.5;
+    }
+    .sheet-frame text {
+      fill: #111;
+      stroke: none;
+      font-size: 13px;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    /* The word's overall width and height, reusing the dimension styles from the picture above, in black */
+    .sheet-dims {
+      position: absolute;
+      opacity: var(--dims, 0);
+    }
+    /* "FRONT VIEW" under the word, like the view labels on a drawing. The script centres it under the word. */
+    .sheet-view {
+      position: absolute;
+      transform: translateX(-50%);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      opacity: var(--dims, 0);
+    }
+
+    /* Headshot placeholder, drawn in under the word once it has moved to the top-left corner. It's a crossed box like
+       the placeholders on a wireframe: the outline draws itself on (--shot), then the cross and label (--shot-x).
+       The script sizes and places it. With a photo (an <img> inside .sheet-shot, before the svg) the photo fades in
+       in place of the cross and label, filling the box under the outline, and the script leaves the cross out. */
+    .sheet-shot {
+      position: absolute;
+      visibility: hidden;
+    }
+    .sheet-shot svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      fill: none;
+      stroke: #111;
+    }
+    .sheet-shot .outline {
+      stroke-width: 1.5;
+      stroke-dasharray: 1;
+      stroke-dashoffset: calc(1 - var(--shot, 0));
+    }
+    .sheet-shot .cross {
+      stroke-width: 0.75;
+      stroke-opacity: 0.5;
+      opacity: var(--shot-x, 0);
+    }
+    .sheet-shot img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: var(--shot-x, 0);
+    }
+    /* A paragraph beside the headshot (under it on phones), placed by the script, fading in with the headshot's cross.
+       On desktop its top lines up with the headshot's and its left edge with the title block's, and its width is
+       capped at about 70 characters a line so it stays easy to read. Its text is a placeholder to replace. */
+    .sheet-text {
+      position: absolute;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+      font-size: clamp(15px, 1.25vw, 20px);
+      line-height: 1.55;
+      color: #2a2d33;
+      opacity: var(--shot-x, 0);
+    }
+    @media (min-width: 721px) {
+      .sheet-text { max-width: 36em; }
+    }
+    @media (max-width: 720px) {
+      .sheet-text {
+        font-size: 15px;
+        line-height: 1.5;
+      }
+    }
+    .sheet .dim { --dim-colour: #111; }
+
+    /* Fast travel between the sheets: a mini drawing sheet for each one with its name under it, and an arrow under
+       the name of the sheet it's on. Every sheet has its own copy (the script copies this one onto the others), so it
+       slides with its sheet. On desktop it sits above the paragraph, and on phones along the bottom of the sheet. The
+       script places them, sets the mini sheets' width (--tw) and the arrows, and the About Me one fades in with the
+       headshot's photo. */
+    .sheet-index {
+      position: absolute;
+      z-index: 12;
+      display: flex;
+      gap: var(--gap, 20px);
+      padding-bottom: 14px;
+      visibility: hidden;
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+      opacity: var(--shot-x, 0);
+    }
+    .sheet-page .sheet-index {
+      visibility: inherit;
+      opacity: 1;
+    }
+    .sheet-index a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: var(--tw, 96px);
+      color: #2b69f7;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.15s ease-out;
+    }
+    /* A landscape A3 sheet in miniature (portrait on phones): border, inner frame and a title block in the corner */
+    .mini-sheet {
+      position: relative;
+      box-sizing: border-box;
+      width: 100%;
+      aspect-ratio: 1.414;
+      border: 1px solid #111;
+      background: #fff;
+      transition: transform 0.15s ease-out, border-color 0.15s ease-out;
+    }
+    .mini-sheet::before,
+    .mini-sheet::after {
+      content: "";
+      position: absolute;
+      border: 1px solid #111;
+      transition: border-color 0.15s ease-out;
+    }
+    .mini-sheet::before { inset: 3px; }
+    .mini-sheet::after {
+      right: 3px;
+      bottom: 3px;
+      width: 45%;
+      height: 22%;
+    }
+    @media (hover: hover) {
+      .sheet-index a:hover { color: #d97946; }
+      .sheet-index a:hover .mini-sheet { transform: translateY(-3px); }
+      .sheet-index a:hover .mini-sheet,
+      .sheet-index a:hover .mini-sheet::before,
+      .sheet-index a:hover .mini-sheet::after { border-color: #d97946; }
+    }
+    /* Points up at its sheet's name. The script places it with transform. */
+    .sheet-index-arrow {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 10px;
+      height: 8px;
+      background: #111;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+    /* The first mini sheet is dimensioned at the real size of an A3 sheet (420 by 297 mm), using the dimension styles
+       from the picture above, smaller. Phones hide those dimensions, which suits the narrow row there. */
+    .sheet-index .dim {
+      --dim-colour: #111;
+      font-size: 10px;
+      font-weight: 400;
+    }
+    .sheet-index .dim-x {
+      height: 18px;
+      bottom: calc(100% + 3px);
+    }
+    .sheet-index .dim-y {
+      width: 18px;
+      right: calc(100% + 3px);
+    }
+    /* The gaps between the mini sheets, dimensioned in the gaps themselves at the sheets' mid-height, at the same scale
+       as the 420. The arrows point straight at the sheets' edges, so they need no extension lines. The script adds
+       them and sets where each sits and how wide it is. */
+    .sheet-index .dim-gap {
+      right: auto;
+      bottom: auto;
+      border-width: 0;
+    }
+    /* A leader like a drawing note's, saying SCROLL: from the first gap's dimension it rises at 45°, then runs flat
+       to an arrowhead above the second gap. The script draws it to fit the spacing. Not on phones,
+       where the row has no dimensions. */
+    .scroll-leader {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1px;
+      height: 1px;
+      overflow: visible;
+      pointer-events: none;
+      fill: #111;
+      stroke: #111;
+    }
+    .scroll-leader path { fill: none; }
+    .scroll-leader text {
+      stroke: none;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+    }
+    @media (max-width: 720px) {
+      .scroll-leader { display: none; }
+    }
+    @media (max-width: 720px) {
+      .sheet-index a {
+        gap: 4px;
+        font-size: 9px;
+      }
+      .mini-sheet { aspect-ratio: 0.707; }
+      .mini-sheet::after {
+        width: 60%;
+        height: 14%;
+      }
+    }
+
+    /* Link to the CV: a plain outlined box with "CV" in link blue, turning orange on hover. On desktop it sits level
+       with the notes, centred on them, with its right edge in line with the headshot's. On phones (no notes) it goes
+       under the headshot against its right edge. The script places it and shows it with the headshot's photo.
+       Its size is set here and read by the script. */
+    .sheet-cv {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      box-sizing: border-box;
+      width: 128px;
+      height: 52px;
+      border: 1.5px solid #111;
+      background: #fff;
+      color: #2b69f7;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+      visibility: hidden;
+      pointer-events: auto;
+      opacity: var(--shot-x, 0);
+      transition: color 0.15s ease-out;
+    }
+    @media (hover: hover) {
+      .sheet-cv:hover { color: #d97946; }
+    }
+    @media (max-width: 720px) {
+      .sheet-cv {
+        width: 96px;
+        height: 42px;
+        font-size: 16px;
+      }
+    }
+
+    /* Notes, above the bottom-left corner of the border, like the general notes on a drawing. Its items are the nav's
+       links, so it takes over as the nav once the real one has faded. Each link has two looks stacked up: .look-nav
+       copies the nav link exactly (the script matches its size), and .look-ink is the drawing lettering. As you scroll,
+       the links take over from the nav's own, cross-fade from one look to the other (--morph), then travel down here
+       (the script moves them with transform). The "NOTES:" heading fades in once they arrive (--notes). */
+    .sheet-notes {
+      position: absolute;
+      left: calc(var(--m) + 48px);
+      bottom: calc(var(--m) + 28px);
+      font-size: 14px;
+      line-height: 1.3;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .sheet-notes h2 {
+      margin: 0;
+      font: inherit;
+      opacity: var(--notes, 0);
+    }
+    .sheet-notes ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    /* Shown from the first bit of scrolling (.flying), when they take over from the nav's links */
+    .note-link {
+      position: relative;
+      display: block;
+      width: max-content;
+      color: inherit;
+      text-decoration: none;
+      pointer-events: auto;
+    }
+    .sheet.flying .note-link { visibility: visible; }
+    /* Link blue from the design brief, turning orange on hover */
+    .look-ink {
+      color: #2b69f7;
+      opacity: var(--morph, 0);
+      transition: color 0.15s ease-out;
+    }
+    /* The item numbers stay in ink like the rest of the drawing, so only the page names read as links */
+    .look-ink > span { color: #111; }
+    /* The same lettering as the nav links in style.css, without their padding, so it sits on their text exactly */
+    .look-nav {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+      font-weight: bold;
+      line-height: 1.15;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+      opacity: calc(1 - var(--morph, 0));
+    }
+    /* The current page's underline, 4px under the text as on the nav */
+    .note-link[aria-current="page"] .look-nav::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -4px;
+      height: 2px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+    @media (hover: hover) {
+      .note-link:hover .look-ink { color: #d97946; }
+    }
+
+    /* Title block in the bottom-right corner, sharing the border's right and bottom edges. It keeps the proportions of
+       a real one (1020 by 190 units) and everything inside is sized in those units, which scale with its width
+       (--u is 1/1020 of the block's width, through the container query unit cqw), so it shrinks like a scaled sheet. */
+    .title-block {
+      position: absolute;
+      right: var(--m);
+      bottom: var(--m);
+      width: min(62%, 1020px);
+      aspect-ratio: 1020 / 190;
+      container-type: inline-size;
+      display: grid;
+      grid-template-columns: 170fr 275fr 260fr 315fr;
+      box-sizing: border-box;
+      border-top: 1.5px solid #111;
+      border-left: 1.5px solid #111;
+      background: #fff;
+      opacity: var(--block, 0);
+      line-height: 1.15;
+    }
+    .title-block * {
+      --u: calc(100cqw / 1020);
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    .tb-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #111;
+    }
+    .tb-col:last-child { border-right: 0; }
+    .tb-cell,
+    .tb-row {
+      flex: 0 0 calc(var(--u) * var(--h));
+      border-bottom: 1px solid #111;
+      overflow: hidden;
+    }
+    .tb-col > :last-child {
+      flex: 1 1 auto;
+      border-bottom: 0;
+    }
+    .tb-cell {
+      display: flex;
+      flex-direction: column;
+      padding: calc(var(--u) * 3) calc(var(--u) * 5);
+      font-size: calc(var(--u) * 13);
+    }
+    .tb-row { display: flex; }
+    .tb-row > .tb-cell {
+      flex: 1 1 0;
+      border-bottom: 0;
+      border-right: 1px solid #111;
+    }
+    .tb-row > .tb-cell:last-child { border-right: 0; }
+    .tb-label { font-size: calc(var(--u) * 10); }
+    .tb-small { font-size: calc(var(--u) * 10); }
+    .tb-centre {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    /* Drawn / Checked / Approved, with a name column */
+    .tb-names {
+      display: grid;
+      grid-template-columns: 60fr 215fr;
+      grid-auto-rows: 1fr;
+      padding: 0;
+      font-size: calc(var(--u) * 11);
+    }
+    .tb-names span {
+      padding: 0 calc(var(--u) * 4);
+      border-right: 1px solid #111;
+      border-bottom: 1px solid #111;
+      white-space: nowrap;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+    .tb-names span:nth-child(2n) { border-right: 0; }
+    .tb-names span:nth-last-child(-n + 2) { border-bottom: 0; }
+    .tb-names .tb-head { font-size: calc(var(--u) * 16); }
+    .tb-title-main {
+      /* Narrow letters like the condensed title on a drawing */
+      font-size: calc(var(--u) * 26);
+      transform: scaleX(0.82);
+      transform-origin: left;
+      white-space: nowrap;
+      margin: calc(var(--u) * 2) 0 calc(var(--u) * 6);
+    }
+    .tb-title-sub {
+      font-size: calc(var(--u) * 19);
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+    .tb-dwg {
+      margin-top: auto;
+      font-size: calc(var(--u) * 23);
+      white-space: nowrap;
+    }
+    .tb-logo {
+      flex-direction: row;
+      align-items: center;
+      gap: calc(var(--u) * 10);
+      padding: calc(var(--u) * 8) calc(var(--u) * 12);
+    }
+    .tb-mark {
+      font-family: "Space Grotesk", Arial, sans-serif;
+      font-weight: 700;
+      font-size: calc(var(--u) * 46);
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: #19519a;
+    }
+    .tb-org {
+      display: flex;
+      flex-direction: column;
+      font-family: "Space Grotesk", Arial, sans-serif;
+      font-size: calc(var(--u) * 11);
+      letter-spacing: 0.04em;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+    .tb-org b { font-size: calc(var(--u) * 15.5); }
+    .tb-big { font-size: calc(var(--u) * 18); }
+    .tb-rev { font-size: calc(var(--u) * 24); }
+    .tb-projection {
+      flex-direction: column;
+      align-items: center;
+      font-size: calc(var(--u) * 11);
+    }
+    .tb-projection svg {
+      width: calc(var(--u) * 110);
+      height: calc(var(--u) * 46);
+      margin-top: auto;
+      fill: none;
+      stroke: #111;
+      stroke-width: 1.2;
+    }
+  </style>
+</head>
+<body>
+  <div class="home-scroll">
+  <div class="home-stage">
+  <div class="paper" aria-hidden="true"></div>
+
+  <nav id="nav">
+    <span class="nav-name">William Bartholomew</span>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="projects.html">Projects</a>
+      <!-- The CV opens in a new tab, like the CV box on the Home drawing -->
+      <a href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
+    </div>
+  </nav>
+
+  <div class="viewer-band" aria-hidden="true"></div>
+  <section id="viewer" class="viewer-fade"></section>
+
+  <main id="content">
+    <div class="intro">
+      <div class="intro-copy">
+        <h1 class="intro-title">Hi, I’m Will</h1>
+        <p class="intro-text">
+          I’m a <strong>mechanical engineering student</strong> at the University of Melbourne with a love for
+          things that go fast. As <strong>lead vehicle dynamics engineer</strong> at my university’s <strong>Formula SAE</strong> team,
+          I spend my time on suspension, tyres and handling. I’m aiming for a career in <strong>automotive or aerospace engineering</strong>,
+          and this site is a look at the work getting me there.
+        </p>
+        <div class="scroll-cue" aria-hidden="true">
+          <span class="scroll-cue-line"></span>
+          <span class="scroll-cue-head"></span>
+          <span class="scroll-cue-note">SCROLL TO<br>NEXT PAGE</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- The engineering drawing the page turns into as you scroll (portrait on phones, without the title block and parts
+       list, and with a paragraph under the headshot). The frame lines are drawn by the script
+       to fit the screen. The title block entries are placeholders to change freely; the script fills in the date,
+       mass and scale. -->
+  <div class="sheet">
+    <svg class="sheet-frame" aria-hidden="true"></svg>
+
+    <div class="sheet-dims" aria-hidden="true">
+      <span class="dim dim-x"><span class="dim-line"></span><span class="dim-value"></span></span>
+      <span class="dim dim-y"><span class="dim-line"></span><span class="dim-value"></span></span>
+    </div>
+    <span class="sheet-view" aria-hidden="true">FRONT VIEW</span>
+
+    <div class="sheet-shot">
+      <img src="media/headshot.jpg" width="900" height="1200" alt="William Bartholomew in a cap and hi-vis vest at a Formula SAE track day">
+      <svg aria-hidden="true"></svg>
+    </div>
+
+    <!-- Put the CV at media/cv.pdf (or change the link). It opens in a new tab. -->
+    <a class="sheet-cv" href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
+
+    <p class="sheet-text">
+      Placeholder paragraph. A few sentences about yourself go here, beside the headshot: who you are, what you work on
+      and what you'd like to do next.
+    </p>
+
+    <!-- Each link's .look-nav text must match the nav link it takes over from (the script pairs them by href) -->
+    <nav class="sheet-notes" aria-label="Pages">
+      <h2>Notes:</h2>
+      <ul>
+        <li><a class="note-link" href="index.html" aria-current="page"><span class="look-ink"><span aria-hidden="true">1. </span>Home</span><span class="look-nav" aria-hidden="true">Home</span></a></li>
+        <li><a class="note-link" href="projects.html"><span class="look-ink"><span aria-hidden="true">2. </span>Projects</span><span class="look-nav" aria-hidden="true">Projects</span></a></li>
+        <li><a class="note-link" href="media/cv.pdf" target="_blank" rel="noopener"><span class="look-ink"><span aria-hidden="true">3. </span>CV</span><span class="look-nav" aria-hidden="true">CV</span></a></li>
+      </ul>
+    </nav>
+
+    <div class="title-block" aria-hidden="true">
+      <div class="tb-col">
+        <div class="tb-cell tb-small" style="--h: 77">
+          <span>Unless otherwise specified:</span>
+          <span>Dimensions are in millimetres.</span>
+          <span>Tolerance standard: ISO 2768</span>
+          <span>Linear tolerance: ±0.2 mm</span>
+          <span>Angular tolerance: ±0.5°</span>
+          <span>Surface finish: 1.6 Ra</span>
+        </div>
+        <div class="tb-cell tb-small tb-centre" style="--h: 35">Break all sharp edges<br>and remove all bugs</div>
+        <div class="tb-cell tb-projection">
+          <span>Third angle projection</span>
+          <!-- The ISO symbol: a cone's side view, then its end view to the right -->
+          <svg viewBox="0 0 110 46">
+            <path d="M8 7 L48 15 V31 L8 39 Z"/>
+            <circle cx="80" cy="23" r="16"/>
+            <circle cx="80" cy="23" r="8"/>
+            <path d="M2 23 H54 M58 23 H102 M80 3 V43" stroke-width="0.6" stroke-dasharray="8 2 2 2"/>
+          </svg>
+        </div>
+      </div>
+      <div class="tb-col">
+        <div class="tb-cell tb-names" style="--h: 70">
+          <span></span><span class="tb-head">Name</span>
+          <span>Drawn</span><span>WILLIAM BARTHOLOMEW</span>
+          <span>Checked</span><span>WILLIAM BARTHOLOMEW</span>
+          <span>Approved</span><span>WILLIAM BARTHOLOMEW</span>
+        </div>
+        <div class="tb-cell" style="--h: 62">
+          <span class="tb-label">Material</span>
+          <span class="tb-big">HTML / CSS / JAVASCRIPT</span>
+        </div>
+        <div class="tb-row">
+          <div class="tb-cell"><span class="tb-label">Finish</span><span>AS CODED</span></div>
+          <div class="tb-cell"><span class="tb-label">Mass</span><span class="tb-big tb-mass" style="margin-top: auto"></span></div>
+        </div>
+      </div>
+      <div class="tb-col">
+        <div class="tb-cell" style="--h: 120">
+          <span class="tb-label">Title</span>
+          <span class="tb-title-main">ABOUT ME</span>
+          <span class="tb-title-sub">WILLIAM BARTHOLOMEW</span>
+          <span class="tb-title-sub">PORTFOLIO</span>
+        </div>
+        <div class="tb-cell">
+          <span class="tb-label">DWG No.</span>
+          <span class="tb-dwg">WB-26-HM-000001-01</span>
+        </div>
+      </div>
+      <div class="tb-col">
+        <div class="tb-cell tb-logo" style="--h: 105">
+          <span class="tb-mark">WB</span>
+          <span class="tb-org"><b>WILLIAM BARTHOLOMEW</b><span>MECHANICAL ENGINEERING</span></span>
+        </div>
+        <div class="tb-row" style="--h: 45">
+          <div class="tb-cell tb-centre tb-big" style="flex-grow: 3">DO NOT SCALE<br>DRAWING</div>
+          <div class="tb-cell"><span class="tb-label">Rev.</span><span class="tb-rev">1</span></div>
+        </div>
+        <div class="tb-row">
+          <div class="tb-cell"><span class="tb-label">Size</span><span class="tb-big">A3</span></div>
+          <div class="tb-cell"><span class="tb-label">Scale</span><span class="tb-big tb-scale"></span></div>
+          <div class="tb-cell"><span class="tb-label">Sheet</span><span class="tb-big tb-sheet">1/4</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fast travel between the sheets, on the About Me sheet; the script copies it onto each of the others. Each link's
+       data-sheet is its place in the stack, and the script builds the other sheets from SHEETS in the page's script,
+       so keep the two lists in step. -->
+  <nav class="sheet-index" aria-label="Sheets">
+    <a href="#about-me" data-sheet="0"><span class="mini-sheet" aria-hidden="true"><span class="dim dim-x"><span class="dim-line"></span><span class="dim-value">420</span></span><span class="dim dim-y"><span class="dim-line"></span><span class="dim-value">297</span></span></span>About Me</a>
+    <a href="#timeline" data-sheet="1"><span class="mini-sheet" aria-hidden="true"></span>Timeline</a>
+    <a href="#projects" data-sheet="2"><span class="mini-sheet" aria-hidden="true"></span>Projects</a>
+    <a href="#faq" data-sheet="3"><span class="mini-sheet" aria-hidden="true"></span>FAQ</a>
+    <span class="sheet-index-arrow" aria-hidden="true"></span>
+  </nav>
+
+  <!-- Content for the sheets the script builds. Each template's id is "sheet-" and its sheet's id (the title in
+       lower case), and the script copies it onto that sheet. -->
+  <template id="sheet-timeline">
+    <!-- The arrow runs from data-start into the future, on one scale that ends at data-end, with a tick at the start
+         of each year in .tl-year. .tl-now marks today, worked out when the page loads. Dates are decimal years
+         (2025.5 is the middle of 2025).
+         Events go above the line and projects below it. A .tl-event (above) or .tl-project (below) is a flag at
+         one date (data-at), and a .tl-span is a dimension from data-from to data-to, above the line, or below it
+         with the "under" class. The script places them all, and moves each one out from the line just far enough to
+         clear the ones to its right, so they can go in any order. Use <br> to split a long label over lines. Labels
+         also wrap on phones, so &nbsp; keeps words together that shouldn't be split there.
+         Each flag's label (and each span's text) is a button. Clicking it shows the panel under the timeline with
+         its picture and text, taken from data-image (a file path), data-alt (what the picture shows) and data-text
+         on the button. The picture is cropped to the panel's 4:3 box; data-position (like "50% 56%", across then
+         down) moves the crop's centre, data-fit="contain" shows a logo or drawing whole instead
+         of cropping it, and data-background (a colour) fills round a contained render so it blends in.
+         Until those are filled in, the panel shows a placeholder picture and text. -->
+    <div class="timeline" data-start="2024" data-end="2029">
+      <span class="timeline-line" aria-hidden="true"></span>
+      <span class="tl-year" data-at="2024">2024</span>
+      <span class="tl-year" data-at="2025">2025</span>
+      <span class="tl-year" data-at="2026">2026</span>
+      <span class="tl-year" data-at="2027">2027</span>
+      <span class="tl-year" data-at="2029">2029</span>
+      <span class="timeline-end">Future</span>
+
+      <div class="tl-span" data-from="2025.92" data-to="2026.8">
+        <span class="dim dim-x"><span class="dim-line"></span><button type="button" class="dim-value" data-image="media/timeline-design-cycle.jpg" data-alt="The VD26 rear suspension assembly open in Autodesk Fusion: both rockers, dampers and the anti-roll bar">2026 FSAE<br>design cycle</button></span>
+      </div>
+      <button type="button" class="tl-event" data-at="2025.67" data-image="media/timeline-joined-fsae.jpg" data-position="50% 56%" data-alt="Melbourne University Racing team members working on the car under a marquee at a track day, with its dampers, cooling fans and Hoosier tyres in view">Joined FSAE team</button>
+      <button type="button" class="tl-event" data-at="2026.82">System head position</button>
+      <!-- 6 December 2026 -->
+      <button type="button" class="tl-event" data-at="2026.93">FSAE 2026 competition</button>
+      <button type="button" class="tl-project" data-at="2027.02">Undergraduate graduation</button>
+      <button type="button" class="tl-project" data-at="2027.08">Beginning of Master&nbsp;of<br>Mechanical Engineering</button>
+      <button type="button" class="tl-event" data-at="2028">Internship plans</button>
+      <button type="button" class="tl-event" data-at="2029">Master’s graduation</button>
+
+      <!-- Projects, under the line -->
+      <div class="tl-span under" data-from="2025.98" data-to="2026.72">
+        <span class="dim dim-x"><span class="dim-line"></span><button type="button" class="dim-value" data-image="media/timeline-tyre-model.png" data-fit="contain" data-background="#fff" data-alt="MATLAB plot of the traction circle for the Hoosier 43100 18.0x6.0-10 R20 tyre on a 6 inch rim at 10 psi: longitudinal against lateral force for normal loads of 200 to 1100 newtons">Tyre model</button></span>
+      </div>
+      <!-- Halfway through the 2026 design cycle -->
+      <button type="button" class="tl-project" data-at="2026.36" data-image="media/timeline-rear-suspension.jpg" data-fit="contain" data-background="#2e3440" data-alt="Render of the VD26 rear suspension assembly in Fusion: both rockers and dampers, the anti-roll bar and the toe links, on a dark grid">Rear suspension</button>
+      <button type="button" class="tl-project" data-at="2026.8" data-image="media/timeline-cyberstar.png" data-fit="contain" data-alt="The Visual Studio Code logo, the editor CyberStar was built in">CyberStar</button>
+      <span class="tl-project tl-now">Now</span>
+    </div>
+
+    <!-- The panel for the clicked item, under the timeline. The script places it and fills it in. -->
+    <div class="tl-detail" id="tl-detail" aria-live="polite">
+      <div class="tl-detail-picture"></div>
+      <div class="tl-detail-text">
+        <h3></h3>
+        <p></p>
+      </div>
+    </div>
+  </template>
+
+  <template id="sheet-faq">
+    <!-- The FAQ sheet: numbered questions, each with a blue triangle at its end. Clicking a question turns its
+         triangle down and opens its answer under it, pushing the rest down, and closes any other that's open. Each
+         answer's id must match its button's aria-controls. The script sets where the list sits. -->
+    <ol class="faq">
+      <li>
+        <h3 class="faq-q"><button type="button" aria-expanded="false" aria-controls="faq-1"><span class="faq-n">1.</span><span class="faq-text">What do I actually do as a vehicle dynamics engineer?</span><span class="faq-arrow" aria-hidden="true"></span></button></h3>
+        <div class="faq-a" id="faq-1" hidden>
+          <p>As a vehicle dynamics engineer, I’m responsible for the design of the car’s suspension, tyre choice, and
+            once on track its setup and handling. This year I was tasked with designing the car’s rear suspension,
+            including wishbone tabs, pushrods, rockers, shock mounts, chassis tabs and anti-roll bars. Going into next
+            year as vehicle dynamics team lead, my responsibilities will focus more on the direction of vehicle dynamics
+            development and larger geometry decisions, as well as managing the members designing each part.</p>
+        </div>
+      </li>
+      <li>
+        <h3 class="faq-q"><button type="button" aria-expanded="false" aria-controls="faq-2"><span class="faq-n">2.</span><span class="faq-text">What software and tools do I use day to day?</span><span class="faq-arrow" aria-hidden="true"></span></button></h3>
+        <div class="faq-a" id="faq-2" hidden>
+          <p>Some of the programs I use (though not the only ones) are ANSYS, key for finite element analysis in
+            component design; Fusion 360, where the team collaborates to design the car; MATLAB, where many of our
+            simulations are coded and run; and Visual Studio Code, where this very website was built!</p>
+        </div>
+      </li>
+      <li>
+        <h3 class="faq-q"><button type="button" aria-expanded="false" aria-controls="faq-3"><span class="faq-n">3.</span><span class="faq-text">Why automotive and aerospace engineering?</span><span class="faq-arrow" aria-hidden="true"></span></button></h3>
+        <div class="faq-a" id="faq-3" hidden>
+          <p>Placeholder answer. A few sentences answering this question go here, in your own words.</p>
+        </div>
+      </li>
+      <li>
+        <h3 class="faq-q"><button type="button" aria-expanded="false" aria-controls="faq-4"><span class="faq-n">4.</span><span class="faq-text">What kind of internship am I looking for, and when am I available?</span><span class="faq-arrow" aria-hidden="true"></span></button></h3>
+        <div class="faq-a" id="faq-4" hidden>
+          <p>I’d be interested in any and all opportunities. Although my skills are currently tailored to areas such as
+            motorsport, and more specifically vehicle dynamics, I pride myself on being applicable to all areas of
+            engineering and able to tackle any challenge that comes my way. Timelines that line up with Australian
+            university dates would be preferable, but any deal has the possibility to be enticing enough for me to take
+            time off university.</p>
+        </div>
+      </li>
+      <li>
+        <h3 class="faq-q"><button type="button" aria-expanded="false" aria-controls="faq-5"><span class="faq-n">5.</span><span class="faq-text">Am I open to sponsorship or industry collaboration through MUR?</span><span class="faq-arrow" aria-hidden="true"></span></button></h3>
+        <div class="faq-a" id="faq-5" hidden>
+          <p>Yes! We have many opportunities for financial or material sponsorship through our team. Creating and running
+            an entirely new car each year is an incredibly expensive process, so every dollar we can save through
+            sponsors helps us immensely. Sponsoring us also comes with a variety of bonuses.</p>
+        </div>
+      </li>
+    </ol>
+  </template>
+
+  <template id="sheet-projects">
+    <!-- Three equal columns: a sketch for each project down the left and right, and text in the middle. To add a
+         project, add another .project-sketch to whichever side has room. Sketches are drawn like the rest of the
+         sheet (black line work on white, with dimensions and a view label). The script sets where it all sits. -->
+    <div class="projects-sheet">
+      <div class="projects-side">
+        <figure class="project-sketch">
+          <img src="media/sketch-fsae-car.svg" alt="Drawing of a Formula SAE car, side view, with its wheelbase dimensioned">
+          <figcaption><a href="formula-sae.html">Formula SAE</a></figcaption>
+        </figure>
+        <figure class="project-sketch">
+          <img src="media/sketch-rear-suspension.svg" alt="Drawing of the rear suspension rocker plate, top view, with dimensions">
+          <figcaption><a href="rear-suspension.html">Rear suspension</a></figcaption>
+        </figure>
+      </div>
+      <div class="projects-text">
+        <p>
+          Placeholder paragraph. A few sentences about the projects go here: what they have in common, how they
+          fit into the car and what each sketch either side of this shows.
+        </p>
+      </div>
+      <div class="projects-side">
+        <figure class="project-sketch">
+          <img src="media/sketch-tyre-model.svg" alt="Drawing of a Hoosier FSAE tyre, side view, with the MATLAB logo in the wheel">
+          <figcaption><a href="tyre-model.html">Tyre model</a></figcaption>
+        </figure>
+        <figure class="project-sketch">
+          <img src="media/sketch-cyberstar.svg" alt="The CyberStar design document's title: Hashtag CyberStar, Design Document, Assignment 2, each in a box">
+          <figcaption><a href="cyberstar.html">CyberStar</a></figcaption>
+        </figure>
+      </div>
+    </div>
+  </template>
+  </div>
+  </div>
+
+    <script src="viewer.js" defer></script>
+    <!-- Archivo Black, a free heavy font that closely matches Arial Black, ready-converted for three.js -->
+    <script src="fonts/archivo-black.js" defer></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  
+    <script type="module">
+      import * as THREE from 'three';
+      import { Font } from 'three/addons/loaders/FontLoader.js';
+      import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+  
+      const TEXT = 'WELCOME';     // any printable ASCII characters
+      const TEXT_SIZE = 100;
+      const DEPTH = 35;           // extrusion depth
+      const ZOOM_MARGIN = 1.36;    // starting zoom: bigger = more zoomed out
+
+      const section = document.getElementById('viewer');
+      // Filled in once the word is built, for the scroll drawing below
+      let body, edges, word;
+
+      const viewer = createViewer(THREE, section, {
+        staticOnPhones: true,
+        // The scroll wheel scrolls the page, which drives the drawing animation, instead of zooming
+        wheelZoom: false,
+        async load() {
+          const geometry = new TextGeometry(TEXT, {
+            font: new Font(window.ARCHIVO_BLACK),
+            size: TEXT_SIZE,
+            height: DEPTH,
+            curveSegments: 10,
+            bevelEnabled: false,
+          });
+          // Center the text on the origin so it spins around its middle
+          geometry.computeBoundingBox();
+          const box = geometry.boundingBox;
+          const textWidth = box.max.x - box.min.x;
+          const textHeight = box.max.y - box.min.y;
+          geometry.translate(
+            -(box.min.x + box.max.x) / 2,
+            -(box.min.y + box.max.y) / 2,
+            -(box.min.z + box.max.z) / 2
+          );
+          geometry.computeBoundingSphere();
+  
+          body = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+            color: 0xc9cdd3,
+            metalness: 0.15,
+            roughness: 0.5,
+            // Push faces back slightly so the edge lines draw cleanly on top
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1,
+          }));
+          edges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(geometry, 30),
+            new THREE.LineBasicMaterial({ color: 0x2d2d2d })
+          );
+          const model = new THREE.Group();
+          model.add(body, edges);
+
+          word = { width: textWidth, height: textHeight, depth: DEPTH };
+          // The corner position and the headshot depend on the word's size, so lay the sheet out again now
+          requestAnimationFrame(refresh);
+
+          return {
+            model,
+            radius: geometry.boundingSphere.radius,
+            floorY: -textHeight / 2 - 0.5,
+            grid: { size: 2000, minor: 40, major: 200 },
+            // Back the camera off far enough that the whole word fits on screen
+            fit(fov, aspect) {
+              const viewH = 2 * Math.tan(fov / 2);
+              const fitWidth = (textWidth * ZOOM_MARGIN) / (viewH * aspect);
+              const fitHeight = (textHeight * ZOOM_MARGIN * 3) / viewH;
+              return Math.max(fitWidth, fitHeight);
+            },
+          };
+        },
+      });
+
+      // ---------- Scroll drawing ----------
+      // How far through .home-scroll the page is scrolled (0 to 1) drives everything below. The shown value eases
+      // toward the real one, so each notch of a mouse wheel glides instead of jumping. Phones get a portrait sheet.
+      const phone = window.matchMedia('(max-width: 720px)');
+      const scroller = document.querySelector('.home-scroll');
+      const stage = scroller.querySelector('.home-stage');
+      const band = stage.querySelector('.viewer-band');
+      const nav = document.getElementById('nav');
+      const content = document.getElementById('content');
+      const paper = stage.querySelector('.paper');
+      const sheet = stage.querySelector('.sheet');
+      const frameSvg = sheet.querySelector('.sheet-frame');
+      const titleBlock = sheet.querySelector('.title-block');
+      const notes = sheet.querySelector('.sheet-notes');
+      const navLinks = nav.querySelector('.nav-links');
+      // Each note link with the nav link it takes over from, and how far it sits from it (worked out in layoutNotes)
+      const flyers = [...notes.querySelectorAll('.note-link')].map((link) => ({
+        link,
+        look: link.querySelector('.look-nav'),
+        from: navLinks.querySelector(`a[href="${link.getAttribute('href')}"]`),
+        dx: 0,
+        dy: 0,
+      }));
+      const shot = sheet.querySelector('.sheet-shot');
+      const shotSvg = shot.querySelector('svg');
+      const dims = sheet.querySelector('.sheet-dims');
+      const viewLabel = sheet.querySelector('.sheet-view');
+      const text = sheet.querySelector('.sheet-text');
+      const cv = sheet.querySelector('.sheet-cv');
+      const [dimWidth, dimHeight] = dims.querySelectorAll('.dim-value');
+      const scaleEl = sheet.querySelector('.tb-scale');
+      const cube = section.querySelector('.viewcube-wrap');
+      // The About Me sheet's fast-travel index. The other sheets get copies of it (see pages below).
+      const index = stage.querySelector('.sheet-index');
+      document.documentElement.classList.add('scroll-drawing');
+
+      // The stack of drawing sheets, top first. The first is the About Me sheet above; the script builds the rest from
+      // its frame, title block and notes. Their order must match the links in .sheet-index.
+      const SHEETS = [
+        { title: 'About Me', code: 'AB' },
+        { title: 'Timeline', code: 'TL' },
+        { title: 'Projects', code: 'PR' },
+        { title: 'FAQ', code: 'FQ' },
+      ];
+      // How much scrolling each part takes, in screen heights (vh): the intro drawing itself, then for each sheet a
+      // pause where it sits still, then the slide that takes it off the stack. The last sheet just gets its pause.
+      const INTRO = 340;
+      const PAUSE = 70;
+      const SLIDE = 100;
+      const TOTAL = INTRO + (SHEETS.length - 1) * (PAUSE + SLIDE) + PAUSE;
+      scroller.style.height = `${100 + TOTAL}vh`;
+      // Where each sheet's slide starts, and where to scroll to show a sheet (the middle of its pause)
+      const slideStart = (i) => INTRO + i * (PAUSE + SLIDE) + PAUSE;
+      const restAt = (i) => INTRO + i * (PAUSE + SLIDE) + PAUSE / 2;
+
+      sheet.querySelector('.tb-dwg').textContent = `WB-26-${SHEETS[0].code}-000001-01`;
+      // The other sheets, each with a copy of the title block (its own title, number and sheet count) and notes. They
+      // go in under the About Me paper, in reverse so each one paints over the ones after it.
+      const pages = SHEETS.slice(1).map((s, i) => {
+        const page = document.createElement('div');
+        page.className = 'sheet-page';
+        page.id = s.title.toLowerCase().replace(/\W+/g, '-');
+        page.innerHTML = `<svg class="sheet-frame" aria-hidden="true"></svg><h2 class="sheet-page-label">SHEET ${i + 2} – ${s.title.toUpperCase()}</h2>`;
+        const block = titleBlock.cloneNode(true);
+        block.querySelector('.tb-title-main').textContent = s.title.toUpperCase();
+        block.querySelector('.tb-dwg').textContent = `WB-26-${s.code}-00000${i + 2}-01`;
+        block.querySelector('.tb-sheet').textContent = `${i + 2}/${SHEETS.length}`;
+        block.querySelector('.tb-scale').textContent = '1:1';
+        const pageNotes = notes.cloneNode(true);
+        for (const link of pageNotes.querySelectorAll('.note-link')) link.removeAttribute('aria-current');
+        page.append(block, pageNotes, index.cloneNode(true));
+        const own = document.getElementById(`sheet-${page.id}`);
+        if (own) page.append(own.content.cloneNode(true));
+        return page;
+      });
+      // The Timeline sheet's arrow, placed in layout(). Found among the built sheets, since they only join the page
+      // just below.
+      const timeline = pages.map((page) => page.querySelector('.timeline')).find(Boolean);
+      // The FAQ sheet's questions, placed in layout(). Clicking one opens its answer and closes any other, or closes
+      // it if it was already open.
+      const faq = pages.map((page) => page.querySelector('.faq')).find(Boolean);
+      faq?.addEventListener('click', (e) => {
+        const button = e.target.closest('.faq-q button');
+        if (!button) return;
+        const opening = button.getAttribute('aria-expanded') !== 'true';
+        for (const b of faq.querySelectorAll('.faq-q button')) {
+          const open = b === button && opening;
+          b.setAttribute('aria-expanded', String(open));
+          document.getElementById(b.getAttribute('aria-controls')).hidden = !open;
+        }
+        // Fit the list to its room again with this answer open (or closed)
+        placeFaq(stage.clientWidth);
+      });
+      // The Projects sheet's columns, placed in layout() like the timeline
+      const projects = pages.map((page) => page.querySelector('.projects-sheet')).find(Boolean);
+      // Its sketches go into the page as inline SVG, so their annotations can be kept the same size as the rest of
+      // the page's however big each sketch is drawn (see .project-sketch svg). Each one's ids get a prefix so they
+      // don't clash with the others'. Where a sketch can't be fetched (the page opened straight from disk), its
+      // <img> stays and simply scales.
+      projects?.querySelectorAll('.project-sketch img').forEach(async (img, n) => {
+        try {
+          const response = await fetch(img.src);
+          if (!response.ok) return;
+          const holder = document.createElement('div');
+          holder.innerHTML = (await response.text())
+            .replace(/\bid="([^"]+)"/g, `id="sketch${n}-$1"`)
+            .replace(/(url\(#|href="#)([^")]+)/g, `$1sketch${n}-$2`);
+          const svg = holder.querySelector('svg');
+          if (!svg) return;
+          svg.setAttribute('role', 'img');
+          svg.setAttribute('aria-label', img.alt);
+          // The sizes its annotations and arrowheads were drawn at, in its own units, which limit how far they grow
+          const note = svg.querySelector('.annotation');
+          svg.dataset.text = parseFloat(note?.closest('[font-size]')?.getAttribute('font-size')) || 0;
+          for (const marker of svg.querySelectorAll('marker')) {
+            marker.dataset.w = marker.getAttribute('markerWidth');
+            marker.dataset.h = marker.getAttribute('markerHeight');
+          }
+          // Drawings marked data-fixed-lines have their line weights set in screen pixels too (see placeProjects),
+          // from the weights they were drawn with
+          if (svg.hasAttribute('data-fixed-lines')) {
+            for (const el of svg.querySelectorAll('[stroke-width]')) el.dataset.weight = el.getAttribute('stroke-width');
+          }
+          img.replaceWith(svg);
+          refresh();
+        } catch {
+          // Leave the <img> in place
+        }
+      });
+      // Today as a decimal year (so the middle of 2025 is 2025.5), the same way the timeline's dates are written
+      function yearNow() {
+        const today = new Date();
+        const y = today.getFullYear();
+        return y + (today - new Date(y, 0, 1)) / (new Date(y + 1, 0, 1) - new Date(y, 0, 1));
+      }
+      // The timeline's panel, which shows the clicked item's picture and text. Clicking the open item again closes it.
+      const detail = timeline?.parentElement.querySelector('.tl-detail');
+      if (timeline) {
+        const PLACEHOLDER_TEXT =
+          'Placeholder text. A few sentences about this go here: what it was, what you did and what came of it.';
+        const CROSS = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+          '<path d="M0 0L100 100M100 0L0 100" vector-effect="non-scaling-stroke"/></svg>';
+        const picture = detail.querySelector('.tl-detail-picture');
+        // Things still to come (dated after today, or for a span, starting after it) have nothing to show yet, so
+        // their buttons are turned off and drawn in plain ink. They come on by themselves once their date passes.
+        const now = yearNow();
+        for (const button of timeline.querySelectorAll('button')) {
+          const item = button.closest('[data-at], [data-from]');
+          if (Number(item.dataset.at ?? item.dataset.from) > now) button.disabled = true;
+        }
+        const buttons = [...timeline.querySelectorAll('button:not(:disabled)')];
+        let open = null;
+        for (const button of buttons) {
+          button.setAttribute('aria-expanded', 'false');
+          button.setAttribute('aria-controls', detail.id);
+          button.addEventListener('click', () => {
+            if (open) {
+              open.setAttribute('aria-expanded', 'false');
+              open.closest('.tl-span, .tl-event, .tl-project').classList.remove('on');
+            }
+            open = open === button ? null : button;
+            detail.classList.toggle('open', Boolean(open));
+            if (!open) return;
+            button.setAttribute('aria-expanded', 'true');
+            button.closest('.tl-span, .tl-event, .tl-project').classList.add('on');
+            // The label as one line, for the heading
+            detail.querySelector('h3').textContent = button.innerText.replace(/\s+/g, ' ');
+            detail.querySelector('p').textContent = button.dataset.text || PLACEHOLDER_TEXT;
+            if (button.dataset.image) {
+              const img = document.createElement('img');
+              img.src = button.dataset.image;
+              img.alt = button.dataset.alt || '';
+              // Where the crop is centred, for a picture that's a different shape from the box. A logo or drawing
+              // (data-fit="contain") is shown whole inside the box instead, with space round it, rather than cropped.
+              img.style.objectPosition = button.dataset.position || '';
+              img.style.objectFit = button.dataset.fit || '';
+              // A logo gets white space round it. A render with its own background (data-background, its colour)
+              // is shown edge to edge on that colour instead, so the box looks like one picture.
+              const backed = Boolean(button.dataset.background);
+              img.style.padding = button.dataset.fit === 'contain' && !backed ? '8%' : '';
+              img.style.background = button.dataset.background || '';
+              // If the file isn't there (yet), the placeholder shows instead of a broken picture
+              img.addEventListener('error', () => { picture.innerHTML = CROSS; }, { once: true });
+              picture.replaceChildren(img);
+            } else {
+              picture.innerHTML = CROSS;
+            }
+          });
+        }
+      }
+      for (const page of [...pages].reverse()) stage.insertBefore(page, paper);
+      // The About Me sheet is the paper, the 3D word on its canvas, the drawing over it and its index, so they all
+      // move together
+      const topSheet = [paper, section, sheet, index];
+      // Every sheet's index, in stack order, and all their links
+      const indexes = [index, ...pages.map((page) => page.querySelector('.sheet-index'))];
+      const indexLinks = indexes.flatMap((ix) => [...ix.querySelectorAll('a')]);
+      // Each index marks its own sheet as the current one
+      indexes.forEach((ix, i) => ix.querySelectorAll('a')[i].setAttribute('aria-current', 'page'));
+      // The title block's "mass" is this page's file size. The browser reports it when the page comes over http (as
+      // on Live Server). Opened straight from disk it reports nothing, so it falls back to the size of the page's
+      // markup as it stands, which is close.
+      {
+        const entry = performance.getEntriesByType('navigation')[0];
+        const bytes = entry?.decodedBodySize || new Blob([document.documentElement.outerHTML]).size;
+        for (const el of stage.querySelectorAll('.tb-mass')) el.textContent = `${(bytes / 1024).toFixed(1)} KB`;
+      }
+
+      const FACE = new THREE.Color(0xc9cdd3);
+      const EDGE = new THREE.Color(0x2d2d2d);
+      const WHITE = new THREE.Color(0xffffff);
+      const BLACK = new THREE.Color(0x000000);
+      const INK = new THREE.Color(0x111111);
+
+      const clamp01 = (t) => Math.min(Math.max(t, 0), 1);
+      const smooth = (t) => t * t * (3 - 2 * t);
+      const lerp = (a, b, t) => a + (b - a) * t;
+
+      let target = 0;
+      let shown = 0;
+      let bandRect = null;
+      let drawRect = null;
+      let cornerRect = null;
+      let margin = 28;
+
+      // How wide the word appears when fitted into a rect: fit() in load() spaces it to ZOOM_MARGIN times its width,
+      // or three times its height times ZOOM_MARGIN, whichever is tighter
+      function wordWidthIn(rect) {
+        return Math.min(rect.width, (rect.height * word.width) / (3 * word.height)) / ZOOM_MARGIN;
+      }
+
+      // Measures the band and the sheet, and draws the sheet's frame to fit the screen
+      function layout() {
+        const w = stage.clientWidth;
+        const h = stage.clientHeight;
+        bandRect = { x: 0, y: band.offsetTop, width: band.offsetWidth, height: band.offsetHeight };
+        margin = parseFloat(getComputedStyle(sheet).getPropertyValue('--m')) || 28;
+        if (phone.matches) {
+          // Phones: the word goes straight to the top of the sheet as the drawing forms, rather than stopping in the
+          // middle first, so the later move to the corner has nothing left to do
+          drawFrame(w, h, 6, 8);
+          if (word) layoutPhoneTop(w, h);
+          placeTimeline(w);
+          placeProjects(w);
+          placeFaq(w);
+          drawRect = cornerRect;
+          return;
+        }
+        // The word sits in the middle 60% of the sheet's width, between the top border and the title block
+        const top = margin + 48;
+        drawRect = { x: w * 0.2, y: top, width: w * 0.6, height: Math.max(titleBlock.offsetTop - 48 - top, 100) };
+        drawFrame(w, h, 8, 6);
+        layoutNotes();
+        if (word) layoutCorner();
+        placeTimeline(w);
+        placeProjects(w);
+        placeFaq(w);
+      }
+
+      // The FAQ list lines up with the sheet's label on the left. On desktop it starts 40px under the index, is up to
+      // 1000px wide, and fills the open sheet down to the title block and notes: its text is sized from that height
+      // (between 14 and 22px), and its questions spread out so that, closed, they take FILL of it, leaving the rest
+      // for an answer to push them down into. On phones it runs from under the label across the sheet, down to the
+      // index.
+      function placeFaq(w) {
+        if (!faq) return;
+        const FILL = 0.75;
+        const label = faq.parentElement.querySelector('.sheet-page-label');
+        const left = margin + (phone.matches ? 24 : 64);
+        const top = phone.matches ? label.offsetTop + label.offsetHeight + 24 : index.offsetTop + index.offsetHeight + 40;
+        const bottom = phone.matches ? index.offsetTop - 24 : Math.min(titleBlock.offsetTop, notes.offsetTop) - 24;
+        const width = phone.matches ? w - 2 * left : Math.min(1000, w - margin - 48 - left);
+        Object.assign(faq.style, { left: `${left}px`, top: `${Math.round(top)}px`, width: `${Math.round(width)}px` });
+        const room = bottom - top;
+        const font = phone.matches ? 13 : Math.min(Math.max(room * 0.056, 14), 22);
+        faq.style.setProperty('--faq-font', `${font}px`);
+        // Each question's own height at that size, then the padding that spreads them out to fill their share
+        const questions = faq.querySelectorAll('.faq-q button');
+        faq.style.setProperty('--faq-pad', '0px');
+        const textH = Math.max(...[...questions].map((q) => q.offsetHeight));
+        let pad = Math.round(Math.min(Math.max((room * FILL) / questions.length / 2 - textH / 2, 10), 30));
+        faq.style.setProperty('--faq-pad', `${pad}px`);
+        // A long answer can push the list past the bottom of its room, into the title block. While one is open the
+        // questions close up first, and only if that isn't enough does the text get smaller, a pixel at a time.
+        let size = font;
+        while (faq.offsetHeight > room && pad > 4) {
+          pad -= 2;
+          faq.style.setProperty('--faq-pad', `${pad}px`);
+        }
+        while (faq.offsetHeight > room && size > 12) {
+          size -= 1;
+          faq.style.setProperty('--faq-font', `${size}px`);
+        }
+        // On the smallest screens that can still leave it a little long, so it moves up into the gap under the index
+        // (by up to 24px of its 40) rather than the text getting any smaller
+        const over = faq.offsetHeight - room;
+        if (over > 0) faq.style.top = `${Math.round(top - Math.min(over, 24))}px`;
+      }
+
+      // The Projects sheet's columns fill the open middle of the sheet. They're the same distance in from the border
+      // on both sides, so the middle column is centred on the sheet. On desktop each column runs down its own
+      // stretch of open paper: from 24px under the sheet's label, or 20px under the index where the index is above
+      // it, down to 14px above the notes or the title block, whichever is under it. The index and title block only
+      // cover the right of the sheet, so the left column gets the most room. On phones they all share one stretch,
+      // from under the label to the index, with the text on top.
+      function placeProjects(w) {
+        if (!projects) return;
+        const label = projects.parentElement.querySelector('.sheet-page-label');
+        const inset = margin + (phone.matches ? 24 : 48);
+        const width = w - 2 * inset;
+        const columns = [...projects.children];
+        const sides = [...projects.querySelectorAll('.projects-side')];
+        const labelBottom = label.offsetTop + label.offsetHeight;
+        let bands;
+        if (phone.matches) {
+          const top = labelBottom + 24;
+          const textH = projects.querySelector('.projects-text').offsetHeight;
+          bands = columns.map(() => ({ top, bottom: index.offsetTop - 24 }));
+          // The sketches get what's left under the text
+          for (const band of bands) band.room = band.bottom - band.top - textH - 24;
+        } else {
+          // Where each column sits across the sheet, from the grid's three equal columns and 48px gaps
+          const colW = (width - 2 * 48) / 3;
+          bands = columns.map((col, i) => {
+            const x0 = inset + i * (colW + 48);
+            const x1 = x0 + colW;
+            const under = (el) => x1 > el.offsetLeft && x0 < el.offsetLeft + el.offsetWidth;
+            const top = Math.max(labelBottom + 24, under(index) ? index.offsetTop + index.offsetHeight + 20 : 0);
+            let bottom = stage.clientHeight - margin - 14;
+            for (const el of [notes, titleBlock]) if (under(el)) bottom = Math.min(bottom, el.offsetTop - 14);
+            return { top, bottom, room: bottom - top };
+          });
+        }
+        const top = Math.min(...bands.map((b) => b.top));
+        const bottom = Math.max(...bands.map((b) => b.bottom));
+        Object.assign(projects.style, {
+          left: `${inset}px`,
+          top: `${Math.round(top)}px`,
+          width: `${width}px`,
+          height: `${Math.round(Math.max(bottom - top, 120))}px`,
+        });
+        columns.forEach((col, i) => {
+          col.style.marginTop = phone.matches ? '' : `${Math.round(bands[i].top - top)}px`;
+          col.style.height = phone.matches ? '' : `${Math.round(bands[i].room)}px`;
+        });
+
+        // In each column the sketches share its height (leaving 16px between them, as .projects-side does, and 26px
+        // for each caption), each in a box as wide as the column, with the drawing fitted inside. Then each
+        // drawing's scale (screen pixels per unit) sets the size its annotations and arrowheads are drawn at, so
+        // they come out at 10px and 10 by 7px, the size of the index's. They only grow to at most GROW times the
+        // size they were drawn at, though, since past that they'd run into the drawing: on a sketch too small for
+        // 10px they shrink with it instead.
+        const GROW = 1.3;
+        sides.forEach((side) => {
+          const i = columns.indexOf(side);
+          const count = Math.max(side.children.length, 1);
+          const boxH = Math.max(Math.min((bands[i].room - (count - 1) * 16) / count - 26, 420), 50);
+          const boxW = side.clientWidth;
+          // A wide drawing (like the car) fills its box's width before its height, so it leaves some of the box's
+          // height empty. That spare height goes to the drawings in the column that fill their height first (like
+          // the rocker), as far as their width allows, so they're drawn bigger.
+          const arts = [...side.querySelectorAll('.project-sketch > img, .project-sketch > svg')];
+          const shape = (art) => {
+            const box = art.viewBox?.baseVal;
+            return box?.width ? box.height / box.width : art.naturalHeight / art.naturalWidth || 1;
+          };
+          const heights = arts.map((art) => Math.min(boxH, boxW * shape(art)));
+          const tall = arts.filter((art, n) => heights[n] >= boxH);
+          const spare = arts.reduce((sum, art, n) => sum + boxH - heights[n], 0);
+          arts.forEach((art, n) => {
+            if (tall.includes(art)) heights[n] = Math.min(boxH + spare / tall.length, boxW * shape(art));
+          });
+          arts.forEach((art, n) => {
+            const artH = heights[n];
+            art.style.width = `${Math.round(boxW)}px`;
+            art.style.height = `${Math.round(artH)}px`;
+            const box = art.viewBox?.baseVal;
+            if (!box || !box.width) return;
+            const s = Math.min(boxW / box.width, artH / box.height);
+            const drawn = Number(art.dataset.text);
+            if (drawn) art.style.setProperty('--annotation', `${Math.min(10 / s, drawn * GROW)}px`);
+            for (const marker of art.querySelectorAll('marker')) {
+              marker.setAttribute('markerWidth', Math.min(10 / s, marker.dataset.w * GROW));
+              marker.setAttribute('markerHeight', Math.min(7 / s, marker.dataset.h * GROW));
+            }
+            // Fixed line weights: its heaviest lines (the outlines) come out at OUTLINE px, close to the page's own
+            // lines (1px dimensions and a 1.5px border), and the rest in proportion, but no thinner than THIN px
+            const weighted = [...art.querySelectorAll('[data-weight]')];
+            if (weighted.length) {
+              const OUTLINE = 1.1;
+              const THIN = 0.7;
+              const heaviest = Math.max(...weighted.map((el) => Number(el.dataset.weight)));
+              for (const el of weighted) {
+                const px = Math.max((el.dataset.weight / heaviest) * OUTLINE, THIN);
+                el.setAttribute('stroke-width', px / s);
+              }
+            }
+          });
+        });
+      }
+
+      // The timeline runs across the open middle of its sheet, halfway down the gap between what's above it and
+      // what's below it. Every sheet shares the same layout, so the About Me sheet's index, notes and title block
+      // stand in for the Timeline sheet's copies.
+      function placeTimeline(w) {
+        if (!timeline) return;
+        const label = timeline.parentElement.querySelector('.sheet-page-label');
+        const labelBottom = label.offsetTop + label.offsetHeight;
+        let left, right, above, below;
+        if (phone.matches) {
+          // Phones: in from the border as far as the index, between the sheet's label and the index along the bottom
+          left = margin + 24;
+          right = w - margin - 24;
+          above = labelBottom;
+          below = index.offsetTop;
+        } else {
+          // Desktop: from in line with the label to the index's right-hand limit, between the index and whichever of
+          // the title block and the notes comes higher
+          left = margin + 64;
+          right = w - margin - 48;
+          above = Math.max(labelBottom, index.offsetTop + index.offsetHeight);
+          below = Math.min(titleBlock.offsetTop, notes.offsetTop);
+        }
+        const width = right - left;
+        timeline.style.left = `${left}px`;
+        timeline.style.width = `${width}px`;
+
+        const start = Number(timeline.dataset.start);
+        const end = Number(timeline.dataset.end);
+        // Today goes on the underside as a flag like the projects, kept between the start and end years
+        const now = yearNow();
+        timeline.querySelector('.tl-now').dataset.at = Math.min(Math.max(now, start), end);
+
+        // The line runs from the start year to the end year, then on for at least a fifth of its length, with enough
+        // room for the last year's number and FUTURE side by side. It isn't to scale: every date on it (the years,
+        // the flags, the spans' ends and today) is a point, and each step between neighbouring points gets an equal
+        // share of the length (STEADY) plus a share in proportion to the time it covers. So where lots happens close
+        // together it spreads out, and the quiet stretches close up.
+        const STEADY = 0.45;
+        const tail = Math.max(width * 0.2, timeline.querySelector('.timeline-end').offsetWidth + 40);
+        const length = width - tail;
+        const knots = [
+          ...new Set(
+            [start, end, ...[...timeline.querySelectorAll('[data-at], [data-from], [data-to]')]
+              .flatMap((el) => [el.dataset.at, el.dataset.from, el.dataset.to])
+              .filter((d) => d !== undefined)
+              .map(Number)]
+          ),
+        ].filter((d) => d >= start && d <= end).sort((a, b) => a - b);
+        const step = (length * STEADY) / (knots.length - 1);
+        const perYear = (length * (1 - STEADY)) / (end - start);
+        const xs = [0];
+        for (let i = 1; i < knots.length; i++) xs.push(xs[i - 1] + step + perYear * (knots[i] - knots[i - 1]));
+        // Where a date falls: in proportion between the points either side of it
+        const at = (date) => {
+          const d = Math.min(Math.max(Number(date), start), end);
+          let i = 1;
+          while (i < knots.length - 1 && knots[i] < d) i++;
+          return xs[i - 1] + ((xs[i] - xs[i - 1]) * (d - knots[i - 1])) / (knots[i] - knots[i - 1]);
+        };
+        for (const el of timeline.querySelectorAll('.tl-year')) el.style.left = `${at(el.dataset.at)}px`;
+        // Heights are measured on screen, and the sheet may be scaled up as it lifts, so this undoes that
+        const scale = timeline.getBoundingClientRect().width / width || 1;
+        const heightOf = (el) =>
+          (timeline.getBoundingClientRect().top - el.getBoundingClientRect().top) / scale + 1;
+
+        // Each side stacks out from the line, from right to left. A label (or an underside span) goes 8px further
+        // out than anything already placed that it would run across, so no leader ever crosses a label. Each entry
+        // in taken is how far along the line something reaches and how far out from the line it stands.
+        function stack(items, taken, base, under) {
+          const x0 = (item) => at(item.dataset.at ?? item.dataset.from);
+          // The leaders a label mustn't be flipped over. Above the line that's every flag's, on both sides, since a
+          // label there sits close to the line and over another flag's dot it reads as if it belongs to it. Below
+          // the line the years sit between the labels and the line, so only this side's leaders count.
+          const leaders = (under ? items.filter((item) => !item.classList.contains('tl-span'))
+            : [...timeline.querySelectorAll('.tl-event, .tl-project')]).map(x0);
+          // How close to the line something reaching from a to b along it can sit
+          const nearest = (a, b) =>
+            taken.reduce((near, t) => (t.from <= b + 8 && t.to >= a - 8 ? Math.max(near, t.out + 8) : near), base);
+          for (const item of items.sort((a, b) => x0(b) - x0(a))) {
+            const x = x0(item);
+            let from;
+            let to;
+            if (item.classList.contains('tl-span')) {
+              // A span reaches as far as its dimension or its text, whichever is wider
+              const x1 = at(item.dataset.to);
+              const text = item.querySelector('.dim-value').offsetWidth;
+              item.style.left = `${x}px`;
+              item.style.width = `${x1 - x}px`;
+              from = Math.min(x, (x + x1 - text) / 2);
+              to = Math.max(x1, (x + x1 + text) / 2);
+            } else {
+              // A flag's label sits 6px to one side of its leader, wrapping if it would run past the arrow's tip or
+              // the start of the line. It goes on the right unless the left lets it sit closer to the line. The left
+              // only counts where none of those leaders further left is under it (on this side, that flag would
+              // have to stand further out and its leader would cross this label).
+              const side = (left) => {
+                item.classList.toggle('flip', left);
+                item.style.maxWidth = `${Math.max(left ? x - 6 : width - x - 6, 96)}px`;
+                return left ? [x - 6 - item.offsetWidth, x] : [x, x + 6 + item.offsetWidth];
+              };
+              const [l0, l1] = side(true);
+              const leftFree = !leaders.some((lx) => lx < x && lx >= l0 - 8);
+              const left = leftFree && nearest(l0, l1) < nearest(...side(false));
+              [from, to] = side(left);
+              item.style.left = `${left ? from : x + 6}px`;
+            }
+            // An underside span's text starts 20px below its top (see .tl-span.under)
+            const size = item.classList.contains('tl-span') ? 20 + item.querySelector('.dim-value').offsetHeight : item.offsetHeight;
+            const near = nearest(from, to);
+            const out = near + size;
+            item.style.top = under ? `${1 + near}px` : `${1 - out}px`;
+            item.style.setProperty('--h', `${out}px`);
+            taken.push({ from, to, out });
+          }
+        }
+
+        // Above the line: the events, clearing the spans there, which stay put since their extension lines start
+        // at the line
+        const upper = [];
+        for (const span of timeline.querySelectorAll('.tl-span:not(.under)')) {
+          const x = at(span.dataset.from);
+          const x1 = at(span.dataset.to);
+          const value = span.querySelector('.dim-value');
+          span.style.left = `${x}px`;
+          span.style.width = `${x1 - x}px`;
+          // Like the underside spans, it reaches as far as its dimension or its text, whichever is wider
+          upper.push({
+            from: Math.min(x, (x + x1 - value.offsetWidth) / 2),
+            to: Math.max(x1, (x + x1 + value.offsetWidth) / 2),
+            out: heightOf(value),
+          });
+        }
+        stack([...timeline.querySelectorAll('.tl-event')], upper, 16);
+        // Below the line: the projects, today and the spans there, all starting clear of the years
+        const yearsDepth = Math.max(...[...timeline.querySelectorAll('.tl-year')].map((el) => el.offsetTop + el.offsetHeight));
+        stack([...timeline.querySelectorAll('.tl-project, .tl-span.under')], [], yearsDepth + 8, true);
+
+        // How far it all reaches above and below the line
+        let up = 0;
+        let down = 0;
+        for (const el of timeline.querySelectorAll('.tl-year, .timeline-end, .tl-event, .tl-project, .tl-span .dim, .dim-value')) {
+          up = Math.max(up, heightOf(el));
+          down = Math.max(down, -heightOf(el) + el.offsetHeight);
+        }
+        // Then the whole thing is centred in the top part of the gap, leaving over half of it free at the bottom for
+        // what goes under it. Where the gap is too small for that, it still keeps 16px clear of whatever's above it.
+        const free = (below - above) * 0.55;
+        const line = Math.max((above + below - free) / 2 + (up - down) / 2, above + up + 16);
+        timeline.style.top = `${Math.round(line)}px`;
+
+        // The clicked item's panel goes 32px under all that, across the same width. On phones it runs down to 16px
+        // above the index. On desktop the title block only covers the right of the sheet, so the picture on the left
+        // can reach down beside it to 24px above the notes (as long as it stays 28px clear of the title block's left
+        // edge), while the text beside it stops 24px above the title block.
+        const panelTop = Math.round(line + down + 32);
+        const text = detail.querySelector('.tl-detail-text');
+        let panelHeight;
+        if (phone.matches) {
+          panelHeight = Math.min(index.offsetTop - 16 - panelTop, 480);
+          text.style.maxHeight = '';
+        } else {
+          panelHeight = Math.min(notes.offsetTop - 24 - panelTop, ((titleBlock.offsetLeft - 28 - left) * 3) / 4, 360);
+          text.style.maxHeight = `${Math.max(titleBlock.offsetTop - 24 - panelTop, 0)}px`;
+        }
+        Object.assign(detail.style, {
+          left: `${left}px`,
+          top: `${panelTop}px`,
+          width: `${width}px`,
+          height: `${Math.max(Math.round(panelHeight), 60)}px`,
+        });
+      }
+
+      // Places the fast-travel index in the given space, with its mini sheets as wide as fits (between the limits),
+      // spread out evenly so the row fills the whole width
+      // Every sheet's copy goes in the same place, with its arrow under its own sheet's name.
+      function placeIndex(left, bottom, width, min, max) {
+        const n = SHEETS.length;
+        // On desktop no wider than a seventh of the row, so on narrower screens the gaps keep room for their
+        // dimensions and the SCROLL leader
+        const most = phone.matches ? max : Math.min(max, width / 7);
+        const tw = Math.round(Math.min(Math.max((width - (n - 1) * 10) / n, min), most));
+        // Whole pixels, so the mini sheets' outlines and the dimension lines land on pixels and all look equally sharp
+        const gap = Math.max(Math.floor((width - n * tw) / (n - 1)), 10);
+        indexes.forEach((ix, i) => {
+          ix.style.setProperty('--gap', `${gap}px`);
+          ix.style.setProperty('--tw', `${tw}px`);
+          ix.style.left = `${Math.round(left)}px`;
+          ix.style.top = `${Math.round(bottom - index.offsetHeight)}px`;
+          // When its sheet lifts it grows about the middle of the screen, like the rest of the sheet, not its own middle
+          ix.style.transformOrigin = `${stage.clientWidth / 2 - Math.round(left)}px ${stage.clientHeight / 2 - Math.round(bottom - index.offsetHeight)}px`;
+          const arrow = ix.querySelector('.sheet-index-arrow');
+          arrow.style.transform = `translateX(${tw / 2 + i * (tw + gap) - arrow.offsetWidth / 2}px)`;
+
+          // A dimension across each gap, in millimetres at the scale the first mini sheet's 420 sets. Its line (6px
+          // down the dimension's box) goes through the middle of the mini sheets.
+          for (const old of ix.querySelectorAll('.dim-gap')) old.remove();
+          const middle = Math.round(ix.querySelector('.mini-sheet').offsetHeight / 2);
+          for (let g = 0; g < n - 1; g++) {
+            const dim = document.createElement('span');
+            dim.className = 'dim dim-x dim-gap';
+            dim.setAttribute('aria-hidden', 'true');
+            dim.innerHTML = `<span class="dim-line"></span><span class="dim-value">${Math.round((gap * 420) / tw)}</span>`;
+            dim.style.left = `${tw + g * (tw + gap)}px`;
+            dim.style.width = `${gap}px`;
+            dim.style.top = `${middle - 6}px`;
+            ix.append(dim);
+          }
+
+          // The SCROLL leader, on every sheet but the last. It comes off the top right of the first gap's number,
+          // rises at 45° to 12px above the mini sheets, then runs flat to the middle of the second gap. The flat part
+          // sits on a half pixel so its 1px line stays sharp.
+          ix.querySelector('.scroll-leader')?.remove();
+          if (i < n - 1) {
+            const x0 = tw + gap / 2 + 10;
+            const y0 = middle - 10;
+            const y1 = -11.5;
+            const x1 = x0 + (y0 - y1);
+            const x2 = Math.max(2 * tw + 1.5 * gap, x1 + 40);
+            const leader = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            leader.setAttribute('class', 'scroll-leader');
+            leader.setAttribute('aria-hidden', 'true');
+            leader.innerHTML = `
+              <path d="M${x0} ${y0}L${x1} ${y1}H${x2 - 9}"/>
+              <polygon points="${x2},${y1} ${x2 - 10},${y1 - 3.5} ${x2 - 10},${y1 + 3.5}" stroke="none"/>
+              <text x="${x1 + 8}" y="${y1 - 5}">SCROLL</text>`;
+            ix.append(leader);
+          }
+        });
+      }
+
+      // Works out how far each note link sits from the nav link it starts on, so it can be moved there, and copies the
+      // nav link's font size onto its nav look (the nav's size scales with the window)
+      function layoutNotes() {
+        const stageTop = stage.getBoundingClientRect().top;
+        for (const f of flyers) {
+          if (!f.from) continue;
+          const style = getComputedStyle(f.from);
+          f.look.style.fontSize = style.fontSize;
+          f.link.style.transform = '';
+          const to = f.link.getBoundingClientRect();
+          const from = f.from.getBoundingClientRect();
+          // The nav link's text starts inside its padding
+          f.dx = from.left + parseFloat(style.paddingLeft) - to.left;
+          f.dy = from.top - stageTop + parseFloat(style.paddingTop) - (to.top - stageTop);
+        }
+      }
+
+      // The viewer centres the word in the rect it's given. This works out the rect (at a 2:1 shape, which fits the
+      // word by width) that puts a word of the given width with its left edge at x and its top at y.
+      function frameFor(x, y, wordW) {
+        const wordH = (wordW * word.height) / word.width;
+        const width = wordW * ZOOM_MARGIN;
+        return { x: x - (width - wordW) / 2, y: y + wordH / 2 - width / 4, width, height: width / 2 };
+      }
+
+      // On phones the CV box goes this far under the headshot
+      const CV_GAP = 16;
+
+      // Lines the CV box's right edge up with the headshot's, with its top at the given height. Returns its bottom.
+      function placeCv(shotRight, top) {
+        top = Math.round(top);
+        cv.style.left = `${Math.round(shotRight - cv.offsetWidth)}px`;
+        cv.style.top = `${top}px`;
+        return top + cv.offsetHeight;
+      }
+
+      // Phones: the word spans the sheet's width, less room each side for its height dimension, at the top of the
+      // sheet with room above it for its width dimension. The headshot box goes in the middle under it at a 3:4
+      // portrait shape with the CV box under it, and the paragraph fills the rest of the sheet under that, down to the
+      // fast-travel index along the bottom. The headshot takes 60% of the height left, so the paragraph gets the rest.
+      function layoutPhoneTop(w, h) {
+        const wordW = w - 2 * (margin + 52);
+        const wordH = (wordW * word.height) / word.width;
+        const top = margin + 56;
+        cornerRect = frameFor((w - wordW) / 2, top, wordW);
+
+        const inner = w - 2 * (margin + 24);
+        const shotTop = top + wordH + 64;
+        cv.style.width = '';
+        // The fast-travel index runs along the bottom of the sheet first, and everything else fits above it
+        placeIndex(margin + 24, h - margin - 14, inner, 36, 46);
+        const room = index.offsetTop - 16 - shotTop - CV_GAP - cv.offsetHeight - 20;
+        let shotH = Math.max(room * 0.6, 120);
+        let shotW = shotH * 0.75;
+        if (shotW > inner) {
+          shotW = inner;
+          shotH = shotW / 0.75;
+        }
+        const shotLeft = (w - shotW) / 2;
+        placeShot(shotLeft, shotTop, shotW, shotH);
+        const textTop = placeCv(shotLeft + shotW, shotTop + shotH + CV_GAP) + 20;
+        Object.assign(text.style, {
+          left: `${margin + 24}px`,
+          top: `${Math.round(textTop)}px`,
+          width: `${inner}px`,
+          height: `${Math.max(index.offsetTop - 16 - textTop, 0)}px`,
+        });
+      }
+
+      // Where the word ends up: in the top-left corner at 70% of its size, leaving room above and to the left for its
+      // dimensions. The headshot box then fills the space below it, down to just above the parts list, at a 3:4
+      // portrait shape.
+      function layoutCorner() {
+        const left = margin + 64;
+        // The fast-travel index's left-most dimension (the 297, 21px left of its first mini sheet) lines up with the
+        // paragraph's left edge, which is the title block's. Where that's closer than the word would reach, the word
+        // is made smaller, so it always ends 40px short of that dimension.
+        const indexLeft = titleBlock.offsetLeft + 21;
+        const wordW = Math.min(wordWidthIn(drawRect) * 0.7, titleBlock.offsetLeft - 40 - left);
+        const wordH = (wordW * word.height) / word.width;
+        const top = margin + 60;
+        cornerRect = frameFor(left, top, wordW);
+
+        // Below the word and its "FRONT VIEW" label. Measured on screen, since the parts list's offsetTop leaves out
+        // its caption.
+        const shotTop = top + wordH + 72;
+        const listTop = notes.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+        // On narrower screens the title block reaches further left, so the headshot is also kept 40px clear of its
+        // left edge, which leaves room for the paragraph beside it.
+        let shotH = Math.max(listTop - 40 - shotTop, 120);
+        const shotW = Math.min(shotH * 0.75, titleBlock.offsetLeft - 40 - left);
+        shotH = shotW / 0.75;
+        placeShot(left, shotTop, shotW, shotH);
+        // The CV box, centred on the notes' height. On narrower screens the headshot is narrower, so the box also
+        // narrows if it needs to, to keep at least 24px clear of the notes.
+        cv.style.width = '';
+        const shotRight = left + Math.round(shotW);
+        const room = shotRight - (notes.offsetLeft + notes.offsetWidth + 24);
+        if (room < cv.offsetWidth) cv.style.width = `${Math.max(room, 56)}px`;
+        placeCv(shotRight, listTop + (notes.offsetHeight - cv.offsetHeight) / 2);
+
+        // The paragraph: from the headshot's top down to 40px above the title block, and from the title block's left
+        // edge to the sheet's border, less the same 48px gap the notes keep from it
+        Object.assign(text.style, {
+          left: `${titleBlock.offsetLeft}px`,
+          top: `${Math.round(shotTop)}px`,
+          width: `${titleBlock.offsetWidth - 48}px`,
+          height: `${Math.max(titleBlock.offsetTop - 40 - shotTop, 0)}px`,
+        });
+
+        // The fast-travel index sits above the paragraph, ending 28px above it, and fits up to 48px short of the border
+        placeIndex(indexLeft, shotTop - 28, stage.clientWidth - margin - 48 - indexLeft, 56, 96);
+      }
+
+      function placeShot(left, top, width, height) {
+        const shotW = Math.round(width);
+        const shotH = Math.round(height);
+        Object.assign(shot.style, {
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(top)}px`,
+          width: `${shotW}px`,
+          height: `${shotH}px`,
+        });
+        // Drawn in exact pixels, like the sheet's border, so the outline redraws cleanly whenever the box changes size
+        shotSvg.setAttribute('viewBox', `0 0 ${shotW} ${shotH}`);
+        // The placeholder's cross only shows while there's no photo in the box
+        shotSvg.innerHTML = `
+          <rect class="outline" pathLength="1" x="0.5" y="0.5" width="${shotW - 1}" height="${shotH - 1}"/>
+          ${shot.querySelector('img') ? '' : `<path class="cross" d="M0 0L${shotW} ${shotH}M${shotW} 0L0 ${shotH}"/>`}`;
+      }
+
+      // The border, an outer trim line, and the zones: numbered columns and lettered rows like an A3 sheet (8 by 6
+      // landscape, or 6 by 8 for the portrait sheet on phones), with longer centre marks at the middle of each side.
+      // Lines sit on half pixels so 1px strokes stay sharp.
+      function drawFrame(w, h, cols, rows) {
+        const m = margin;
+        const edge = 8;
+        const px = (v) => Math.round(v) + 0.5;
+        const innerW = w - 2 * m;
+        const innerH = h - 2 * m;
+        let marks = '';
+        for (let i = 0; i < cols; i++) {
+          const x = m + (innerW * i) / cols;
+          if (i > 0) {
+            const reach = i === cols / 2 ? 18 : 0;
+            marks += `<path d="M${px(x)} ${edge}V${m + reach}M${px(x)} ${h - m - reach}V${h - edge}"/>`;
+          }
+          const cx = x + innerW / cols / 2;
+          marks += `<text x="${cx}" y="${(edge + m) / 2}">${i + 1}</text><text x="${cx}" y="${h - (edge + m) / 2}">${i + 1}</text>`;
+        }
+        for (let j = 0; j < rows; j++) {
+          const y = m + (innerH * j) / rows;
+          if (j > 0) {
+            const reach = j === rows / 2 ? 18 : 0;
+            marks += `<path d="M${edge} ${px(y)}H${m + reach}M${w - m - reach} ${px(y)}H${w - edge}"/>`;
+          }
+          const cy = y + innerH / rows / 2;
+          const letter = 'ABCDEFGH'[j];
+          marks += `<text x="${(edge + m) / 2}" y="${cy}">${letter}</text><text x="${w - (edge + m) / 2}" y="${cy}">${letter}</text>`;
+        }
+        // Every sheet in the stack gets the same frame
+        for (const svg of [frameSvg, ...pages.map((page) => page.querySelector('.sheet-frame'))]) {
+          svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+          svg.innerHTML = `
+            <rect class="trim marks" x="${edge + 0.5}" y="${edge + 0.5}" width="${w - 2 * edge - 1}" height="${h - 2 * edge - 1}"/>
+            <rect class="draw" pathLength="1" x="${m}" y="${m}" width="${innerW}" height="${innerH}"/>
+            <g class="marks">${marks}</g>`;
+        }
+      }
+
+      const lerpRect = (a, b, t) => ({
+        x: lerp(a.x, b.x, t),
+        y: lerp(a.y, b.y, t),
+        width: lerp(a.width, b.width, t),
+        height: lerp(a.height, b.height, t),
+      });
+
+      // Shows the page at t, how far through the whole scroll it is (0 to 1): the intro drawing, then the stack
+      function apply(t) {
+        const s = t * TOTAL;
+        applyIntro(clamp01(s / INTRO));
+        applyStack(s);
+      }
+
+      // Takes each sheet (with its index) off the stack as its stretch of scrolling passes: over the first fifth it
+      // lifts, growing 1.5% towards you as its shadow deepens, then it slides away to the left, staying lifted. A sheet
+      // underneath only shows once the one above it starts to move.
+      function applyStack(s) {
+        const progress = SHEETS.slice(0, -1).map((_, i) => clamp01((s - slideStart(i)) / SLIDE));
+        // In pixels of the screen's width, not percent, since a percentage would be of each element's own width and
+        // the index is narrower than the sheet. The extra 8% takes the lifted sheet's shadow off screen too.
+        const width = stage.clientWidth * 1.08;
+        progress.forEach((r, i) => {
+          const lift = smooth(clamp01(r / 0.2));
+          const slide = smooth(clamp01((r - 0.12) / 0.88));
+          const move = r > 0 ? `translateX(${-width * slide}px) scale(${1 + 0.015 * lift})` : '';
+          const els = i === 0 ? topSheet : [pages[i - 1]];
+          for (const el of els) el.style.transform = move;
+          (i === 0 ? paper : pages[i - 1]).style.setProperty('--lift', lift);
+        });
+        pages.forEach((page, i) => { page.style.visibility = progress[i] > 0 ? 'visible' : 'hidden'; });
+      }
+
+      // Shows the intro animation at progress p (0 to 1). The drawing builds over the first 72% of it, and the rest
+      // moves the word into the corner (or to the top, on phones) and draws the headshot in.
+      function applyIntro(p) {
+        // Each step runs over its own stretch of the scroll, overlapping the next so it flows. The drawing's steps are
+        // timed on their own 0 to 1 scale, q, which runs over the first 72%.
+        const at = (v, from, to) => smooth(clamp01((v - from) / (to - from)));
+        const q = p / 0.72;
+        const step = (from, to) => at(q, from, to);
+        const fadeUi = step(0, 0.18);
+        const turn = step(0.04, 0.5);
+        const flatten = step(0.2, 0.55);
+        const gridGone = step(0.12, 0.42);
+        const move = step(0.45, 0.75);
+        const ink = step(0.5, 0.75);
+
+        // 1. Everything but the word fades. On desktop the nav's links are taken over by the notes' links, drawn in the
+        //    same place in the same lettering, which turn into drawing lettering as the bar fades, then (step 4) travel
+        //    down to the notes in the bottom-left corner.
+        for (const el of [nav, content, cube]) el.style.opacity = 1 - fadeUi;
+        nav.style.visibility = content.style.visibility = fadeUi >= 1 ? 'hidden' : '';
+        const flying = p > 0 && !phone.matches;
+        navLinks.style.visibility = flying ? 'hidden' : '';
+        sheet.classList.toggle('flying', flying);
+        sheet.style.setProperty('--morph', fadeUi);
+        // They move like a plotter pen, so they go round the word rather than across it: first they step apart into
+        // their final line spacing (while still spread out along the top, so they can't overlap) and drop 48px inside
+        // the sheet's top border, then slide left into a column, then the column moves down the left margin together.
+        // "NOTES:" appears once they've arrived under it.
+        const stack = 1 - step(0.5, 0.56);
+        const across = 1 - step(0.53, 0.68);
+        const down = 1 - step(0.64, 0.85);
+        const firstDy = flyers[0].dy;
+        for (const f of flyers) {
+          const y = (f.dy - firstDy) * stack + (firstDy + 48 * (1 - stack)) * down;
+          f.link.style.transform = flying ? `translate(${f.dx * across}px, ${y}px)` : '';
+        }
+        sheet.style.setProperty('--notes', step(0.8, 0.92));
+        // Phones keep the viewer display-only all the time (staticOnPhones), so swipes scroll the page
+        section.classList.toggle('viewer-static', p > 0 || phone.matches);
+
+        // 2. The word turns to face the front as the grid fades, and the field of view narrows from 30° to 1° while
+        //    the camera backs off to keep the same size, which flattens it into an almost orthographic drawing view
+        viewer.setPose({ blend: turn, x: 0, y: 0, fov: lerp(30, 1, flatten) });
+        viewer.setGridOpacity(1 - gridGone);
+        // The band's fade and the page colour under it hide the grid's bottom edge, so they stay until the grid has
+        // gone, then go before the paper turns white
+        band.style.opacity = 1 - step(0.4, 0.5);
+
+        // 3. It moves into the drawing area, the faces go white and the edges black, and the paper turns white.
+        // 5. (Later) it slides up into the top-left corner and shrinks (on phones, straight up to the top), and the
+        //    headshot box draws in under it, with the paragraph on phones
+        const corner = at(p, 0.76, 0.9);
+        const shotOutline = at(p, 0.86, 0.96);
+        const shotFill = at(p, 0.92, 1);
+        if (bandRect && drawRect) {
+          let frame = lerpRect(bandRect, drawRect, move);
+          if (cornerRect) frame = lerpRect(frame, cornerRect, corner);
+          viewer.setFrame(frame);
+        }
+        shot.style.visibility = shotOutline > 0 ? 'visible' : 'hidden';
+        // Hidden until it starts fading in, so it can't be clicked while invisible
+        cv.style.visibility = shotFill > 0 ? 'visible' : 'hidden';
+        shot.style.setProperty('--shot', shotOutline);
+        // Set on the sheet so the paragraph fades in with the headshot's photo, and the index with them
+        sheet.style.setProperty('--shot-x', shotFill);
+        index.style.setProperty('--shot-x', shotFill);
+        index.style.visibility = shotFill > 0 ? 'visible' : 'hidden';
+        if (body) {
+          body.material.color.lerpColors(FACE, WHITE, ink);
+          body.material.emissive.lerpColors(BLACK, WHITE, ink);
+          edges.material.color.lerpColors(EDGE, INK, ink);
+        }
+        paper.style.opacity = ink;
+
+        // 4. The sheet draws itself in around it
+        const draw = step(0.55, 0.8);
+        const marks = step(0.65, 0.85);
+        const dimsIn = step(0.8, 0.95);
+        sheet.style.visibility = draw > 0 ? 'visible' : 'hidden';
+        sheet.style.setProperty('--draw', draw);
+        sheet.style.setProperty('--marks', marks);
+        sheet.style.setProperty('--block', marks);
+        sheet.style.setProperty('--dims', dimsIn);
+        if (word && draw > 0) placeDims();
+      }
+
+      // Lines the dimensions up with the front face of the word, and works out the mass and the drawing's scale
+      function placeDims() {
+        const hw = word.width / 2;
+        const hh = word.height / 2;
+        const front = word.depth / 2;
+        const tl = viewer.project(new THREE.Vector3(-hw, hh, front));
+        const br = viewer.project(new THREE.Vector3(hw, -hh, front));
+        // Rounded to whole pixels, so the dimension lines are as sharp as the index's and don't blur across two
+        // pixels (which makes a 1px line look thicker and greyer)
+        const x0 = Math.round(tl.x);
+        const y0 = Math.round(tl.y);
+        Object.assign(dims.style, {
+          left: `${x0}px`,
+          top: `${y0}px`,
+          width: `${Math.round(br.x) - x0}px`,
+          height: `${Math.round(br.y) - y0}px`,
+        });
+        viewLabel.style.left = `${(tl.x + br.x) / 2}px`;
+        viewLabel.style.top = `${br.y + 24}px`;
+        dimWidth.textContent = Math.round(word.width);
+        dimHeight.textContent = Math.round(word.height);
+        // Scale: how big the word is on screen (at the CSS standard of 96px to the inch) against its real size
+        const screenMm = ((br.x - tl.x) * 25.4) / 96;
+        const ratio = word.width / screenMm;
+        scaleEl.textContent = ratio >= 1 ? `1:${+ratio.toFixed(1)}` : `${+(1 / ratio).toFixed(1)}:1`;
+      }
+
+      function readScroll() {
+        const range = scroller.offsetHeight - window.innerHeight;
+        target = range > 0 ? clamp01((window.scrollY - scroller.offsetTop) / range) : 0;
+        if (!ticking) {
+          ticking = true;
+          last = performance.now();
+          requestAnimationFrame(tick);
+        }
+      }
+      let ticking = false;
+      let last = 0;
+      // Set by a fast-travel click until the page arrives
+      let travelling = false;
+      function tick(now) {
+        // A frame's timestamp can be slightly earlier than the moment the scroll was read, so never let it go negative
+        const dt = Math.min(Math.max(now - last, 0) / 1000, 0.05);
+        last = now;
+        // A fast-travel jump eases in a little slower than normal scrolling, so the sheets in between don't flash past
+        shown += (target - shown) * (1 - Math.exp(-dt * (travelling ? 6 : 10)));
+        if (Math.abs(target - shown) < 0.0005) {
+          shown = target;
+          travelling = false;
+        }
+        apply(shown);
+        if (shown !== target) requestAnimationFrame(tick);
+        else ticking = false;
+      }
+
+      function refresh() {
+        layout();
+        readScroll();
+        apply(shown);
+      }
+      // The band changes size without the stage when the intro's height changes, for example once its font loads
+      const sizes = new ResizeObserver(refresh);
+      sizes.observe(stage);
+      sizes.observe(band);
+      phone.addEventListener('change', refresh);
+      window.addEventListener('scroll', readScroll, { passive: true });
+
+      // Fast travel: jump the scroll straight to the sheet's resting place. The shown position then eases there, so
+      // the sheets in between slide off (or back on) one after another, like leafing through the stack.
+      for (const link of indexLinks) {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const range = scroller.offsetHeight - window.innerHeight;
+          const top = scroller.offsetTop + (restAt(Number(link.dataset.sheet)) / TOTAL) * range;
+          travelling = true;
+          window.scrollTo({ top, behavior: 'instant' });
+        });
+      }
+      refresh();
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,171 @@
+/* Fusion-style 3D viewer used by viewer.js */
+
+.viewer {
+  position: relative;
+  height: 70vh;
+  min-height: 360px;
+  overflow: hidden;
+  user-select: none;
+  /* Same flat off-white as the page (style.css), so the viewer sits on the page with no visible edge */
+  background: #f4f4f4;
+}
+
+/* Optional: add class="viewer-fade" to the section to blend the bottom of the viewer into the page.
+   It fades to the page background colour from style.css (#f4f4f4). */
+.viewer-fade::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28%;
+  background: linear-gradient(180deg, rgba(244, 244, 244, 0) 0%, rgba(244, 244, 244, 0.45) 60%, #f4f4f4 100%);
+  pointer-events: none;
+}
+
+.viewer-scene {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.viewer-scene.dragging { cursor: grabbing; }
+.viewer-scene canvas { display: block; }
+
+.viewer-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.6;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+/* ViewCube */
+.viewcube-wrap {
+  position: absolute;
+  top: 34px;
+  right: 44px;
+  width: 80px;
+  height: 80px;
+  perspective: 400px;
+}
+.viewcube-home {
+  position: absolute;
+  top: -6px;
+  left: -10px;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+}
+@media (hover: hover) {
+  .viewcube-home:hover { color: #0696d7; }
+}
+.viewcube {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 60px;
+  height: 60px;
+  transform-style: preserve-3d;
+}
+.cube-face {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  font-family: "Segoe UI", system-ui, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #80858c;
+  /* Soft white faces with a bevelled rim, like Fusion's ViewCube */
+  background: linear-gradient(160deg, #ffffff 0%, #eef0f2 60%, #e2e5e8 100%);
+  border: 1px solid #c4c8cd;
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 255, 255, 0.7),
+    inset 0 0 0 5px rgba(0, 0, 0, 0.05),
+    inset 0 0 8px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+  cursor: pointer;
+  backface-visibility: hidden;
+}
+/* Hover only on mouse devices, so a tapped face doesn't stay highlighted on phones */
+@media (hover: hover) {
+  .cube-face:hover {
+    background: linear-gradient(160deg, #dff1fb 0%, #bfe3f5 100%);
+    color: #0670a0;
+  }
+}
+
+/* XYZ axis triad running along the cube's edges from its origin corner */
+.axis {
+  position: absolute;
+  left: 30px;
+  top: 29px;
+  width: 84px;
+  height: 2px;
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+/* A second strip at right angles so the line never vanishes edge-on */
+.axis::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  transform: rotateX(90deg);
+}
+.axis-x { background: #e5534b; transform: translate3d(-30px, 30px, 30px); }
+.axis-y { background: #4cc35a; transform: translate3d(-30px, 30px, 30px) rotateY(90deg); }
+.axis-z { background: #5468e8; transform: translate3d(-30px, 30px, 30px) rotateZ(-90deg); }
+.axis-label {
+  position: absolute;
+  left: 30px;
+  top: 30px;
+  font: 600 15px "Segoe UI", system-ui, Arial, sans-serif;
+  pointer-events: none;
+}
+
+/* Soft shadow under the cube */
+.viewcube-wrap::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -14px;
+  height: 14px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Phones: a shorter viewer leaves room below it to scroll the page with a finger
+   (touches on the viewer itself rotate/zoom the model, unless it is display-only), and a smaller ViewCube tucked into the corner */
+@media (max-width: 720px) {
+  .viewer {
+    height: 60vh;
+    height: 60svh;
+    min-height: 300px;
+  }
+  .viewcube-wrap {
+    top: 20px;
+    right: 20px;
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+}
+
+/* Display only (see staticOnPhones in viewer.js): no rotating, zooming or ViewCube clicks,
+   and touches fall through to the page so it scrolls normally */
+.viewer-static .viewer-scene,
+.viewer-static .viewcube-wrap {
+  pointer-events: none;
+  touch-action: auto;
+  cursor: default;
+}

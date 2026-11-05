@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1104" height="640" viewBox="0 0 1104 640">
+  <!-- The CyberStar design document's title, as on its cover: three lines of condensed capitals, each in a thin box
+       like a title block's cells. textLength stretches each line to fill its box exactly, so it looks the same
+       whichever narrow font the viewer has. -->
+  <g fill="none" stroke="#111" stroke-width="4">
+    <rect x="45" y="52" width="1021" height="83"/>
+    <rect x="100" y="258" width="911" height="83"/>
+    <rect x="212" y="461" width="686" height="84"/>
+  </g>
+  <g fill="#111" font-family="'Arial Narrow', 'Liberation Sans Narrow', 'Helvetica Neue', Arial, sans-serif" font-size="118" lengthAdjust="spacingAndGlyphs">
+    <text x="44" y="134" textLength="1022" lengthAdjust="spacingAndGlyphs">HASHTAG CYBERSTAR</text>
+    <text x="99" y="340" textLength="912" lengthAdjust="spacingAndGlyphs">DESIGN DOCUMENT</text>
+    <text x="211" y="544" textLength="688" lengthAdjust="spacingAndGlyphs">ASSIGNMENT 2</text>
+  </g>
+</svg>

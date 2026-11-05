@@ -1,0 +1,252 @@
+/* Projects page: full-height video header followed by a grid of portfolio tiles */
+
+@font-face {
+  font-family: "Archivo Black";
+  src: url("fonts/ArchivoBlack-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+.projects-page {
+  /* The page grey. The header's bottom fade (.hero::after) eases into this same colour, so change them together. */
+  background: #1c1e22;
+  color: #f2f4f7;
+}
+
+/* ---------- Header video ---------- */
+.hero {
+  position: relative;
+  height: calc(100vh - var(--nav-height) - 2px);
+  height: calc(100svh - var(--nav-height) - 2px);
+  min-height: 420px;
+  /* Tuck 1px under the nav bar so no sliver of page shows between them at odd zoom levels */
+  margin-top: -1px;
+  overflow: hidden;
+  background: #5f656e;
+}
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Darken the bottom so the title stays readable over any footage */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Stays clear for most of the header, then eases into the exact page grey so there is no edge */
+  background: linear-gradient(180deg,
+    rgba(28, 30, 34, 0) 65%,
+    rgba(28, 30, 34, 0.3) 80%,
+    rgba(28, 30, 34, 0.7) 92%,
+    rgba(28, 30, 34, 1) 100%);
+  pointer-events: none;
+}
+.hero-text {
+  position: absolute;
+  left: clamp(16px, 5vw, 64px);
+  right: clamp(16px, 5vw, 64px);
+  bottom: clamp(32px, 8vh, 80px);
+  z-index: 1;
+  /* Keeps white text readable now the page is a lighter grey */
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.hero-text h1 {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+  font-weight: 600;
+  font-size: clamp(48px, 10vw, 144px);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+.hero-text p {
+  margin: 16px 0 0;
+  max-width: 520px;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.5;
+  color: rgba(242, 244, 247, 0.92);
+}
+.scroll-cue {
+  position: absolute;
+  right: clamp(16px, 5vw, 64px);
+  bottom: clamp(32px, 8vh, 80px);
+  z-index: 1;
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(242, 244, 247, 0.85);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+}
+.scroll-cue::after {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 40px;
+  margin: 10px auto 0;
+  background: currentColor;
+  animation: cue 1.8s ease-in-out infinite;
+  transform-origin: top;
+}
+@keyframes cue {
+  0% { transform: scaleY(0); }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ---------- Portfolio tiles ---------- */
+.portfolio {
+  padding: clamp(16px, 3vw, 40px);
+}
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+/* Layout from the wireframe: one wide tile, three thirds, then a third and two thirds (only the first four tiles
+   are on the page for now) */
+.tile:nth-child(1) { grid-column: span 6; aspect-ratio: 2 / 1; }
+.tile:nth-child(2),
+.tile:nth-child(3),
+.tile:nth-child(4),
+.tile:nth-child(5) { grid-column: span 2; aspect-ratio: 7 / 6; }
+.tile:nth-child(6) { grid-column: span 4; }
+
+.tile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  /* Keep hover changes inside a tile from affecting the rest of the page */
+  contain: layout paint;
+  background: #6b7179;
+  color: #fff;
+  text-decoration: none;
+}
+.tile-media {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Give the picture its own layer so the hover zoom runs on the graphics card */
+  will-change: transform;
+}
+.tile-media img,
+.tile-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Shade the bottom of each tile so the title reads over any picture */
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.45) 100%);
+}
+/* Slight darkening on hover, faded with opacity so it needs no repainting */
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+/* Title block from the sketch: big serif title over a thin line. On hover the title lifts,
+   an uppercase subtitle slides in beneath it, and a bold diagonal arrow appears on the right. */
+.tile-title {
+  position: absolute;
+  left: clamp(12px, 2vw, 24px);
+  right: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 22px);
+  z-index: 1;
+  padding: 0 clamp(36px, 3.5vw, 52px) 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+  font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+}
+.tile-title h2 {
+  margin: 0;
+  font-weight: normal;
+  font-size: clamp(26px, 3vw, 44px);
+  line-height: 1;
+}
+.tile:nth-child(1) .tile-title h2 { font-size: clamp(32px, 5vw, 72px); }
+/* Collapsed to zero height until hover, then grows to fit, pushing the title up */
+.tile-subtitle {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin: 0;
+  opacity: 0;
+  transition: grid-template-rows 0.35s ease-out, opacity 0.35s ease-out;
+}
+.tile-subtitle span {
+  overflow: hidden;
+  padding-top: 4px;
+  font-size: clamp(12px, 1.1vw, 16px);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.tile-arrow {
+  position: absolute;
+  right: 0;
+  bottom: 8px;
+  width: clamp(26px, 2.6vw, 40px);
+  height: clamp(26px, 2.6vw, 40px);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  /* Head: flat-cut ends and a sharp mitred tip. The shaft has its own round cap
+     (set on its path in projects.html) so only its tail end is curved. */
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  opacity: 0;
+  transform: translate(-8px, 8px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.tile:hover .tile-media,
+.tile:focus-visible .tile-media { transform: scale(1.05); }
+.tile:hover::before,
+.tile:focus-visible::before { opacity: 1; }
+.tile:hover .tile-subtitle,
+.tile:focus-visible .tile-subtitle { grid-template-rows: 1fr; opacity: 1; }
+.tile:hover .tile-arrow,
+.tile:focus-visible .tile-arrow { opacity: 1; transform: none; }
+.tile:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Tiles fade up as they scroll into view (only when JavaScript is running) */
+.js .tile {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.js .tile.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Phones: one column of square tiles with static titles ---------- */
+@media (max-width: 720px) {
+  .portfolio-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tile:nth-child(n) { grid-column: auto; aspect-ratio: 1 / 1; }
+  .scroll-cue { display: none; }
+
+  /* Just the title and its line: no hover subtitle, arrow or zoom */
+  .tile-title { padding-right: 0; }
+  .tile-title h2,
+  .tile:nth-child(1) .tile-title h2 { font-size: clamp(26px, 8vw, 36px); }
+  .tile-subtitle,
+  .tile-arrow { display: none; }
+  .tile:hover .tile-media,
+  .tile:focus-visible .tile-media { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue::after { animation: none; }
+  .js .tile { opacity: 1; transform: none; transition: none; }
+  .tile-media { transition: none; }
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberStar</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="nav.js" defer></script>
+  <style>
+    /* The picture across the top of the page: three fifths of the screen below the nav bar and its 2px border, as on
+       the Formula SAE page */
+    .project-picture {
+      display: block;
+      width: 100%;
+      height: calc((100vh - var(--nav-height) - 2px) * 0.6);
+      height: calc((100svh - var(--nav-height) - 2px) * 0.6);
+      object-fit: cover;
+    }
+    /* The project's name over the picture (the design document's 15 pages laid out in rows), as on the Tyre Model
+       page: a grey wash over the whole band so the white text reads over the busy pages, and the heading in the
+       nav bar's bold Bookman with a soft shadow */
+    .project-hero {
+      position: relative;
+      margin: 0;
+    }
+    .project-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(52, 56, 64, 0.5);
+      pointer-events: none;
+    }
+    .project-hero h1 {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 0 16px;
+      font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+      font-weight: bold;
+      font-size: clamp(28px, 4.8vw, 76px);
+      line-height: 1.15;
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <nav id="nav">
+    <span class="nav-name">William Bartholomew</span>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html">Home</a>
+      <!-- This page belongs to Projects, so that link stays highlighted here -->
+      <a href="projects.html" aria-current="page">Projects</a>
+      <!-- The CV opens in a new tab, like the CV box on the Home drawing -->
+      <a href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
+    </div>
+  </nav>
+
+  <!-- Stub page for the CyberStar project, linked from its tile on Projects and its sketch on the Home page's
+       Projects sheet. The content goes here. -->
+  <main id="content">
+    <!-- The pages were rendered from the design document's PDF into one image, five to a row -->
+    <header class="project-hero">
+      <img class="project-picture" src="media/cyberstar-pages.jpg" width="2484" height="1074"
+        alt="All 15 pages of the Hashtag CyberStar design document, each laid out as an engineering drawing sheet, in three rows">
+      <h1>A Class in Web Design</h1>
+    </header>
+  </main>
+</body>
+</html>

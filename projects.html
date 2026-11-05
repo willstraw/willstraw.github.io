@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="projects.css">
+  <script src="nav.js" defer></script>
+  <!-- Lets the tiles start hidden so they can fade in; without JavaScript they just show -->
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body class="projects-page">
+  <nav id="nav">
+    <span class="nav-name">William Bartholomew</span>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html">Home</a>
+      <a href="projects.html" aria-current="page">Projects</a>
+      <!-- The CV opens in a new tab, like the CV box on the Home drawing -->
+      <a href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <!-- The MUR montage plays behind the heading on a silent loop. Browsers only autoplay video that's muted, and
+         playsinline stops phones taking it full screen. It's decoration, so screen readers skip it. -->
+    <video class="hero-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+      <source src="media/MUR_edit_16x9.mp4" type="video/mp4">
+    </video>
+    <div class="hero-text">
+      <h1>Projects</h1>
+      <p>A little bit of what I’ve been working on between classes.</p>
+    </div>
+    <a class="scroll-cue" href="#portfolio">Scroll</a>
+  </header>
+
+  <main class="portfolio" id="portfolio">
+    <!-- Four portfolio tiles (the wireframe had six, and projects.css still lays out a fifth and sixth if they come
+         back). Each picture fills its tile, cropped to fit. They all sit below the full-height video, so they load
+         lazily, only as the visitor scrolls towards them. -->
+    <div class="portfolio-grid">
+      <a class="tile" href="formula-sae.html">
+        <!-- The wide tile crops the photo's top and bottom, so it's centred a little high to keep everyone's faces
+             in, trimming the garage roof and the ground instead -->
+        <div class="tile-media"><img src="media/formula-sae-tile.jpg" loading="lazy" decoding="async" alt="Eight Melbourne University Racing team members in MUR shirts outside the workshop, standing round the bare chassis of the car with one of them sitting in it" width="2400" height="1603" style="object-position: 50% 30%"></div>
+        <div class="tile-title">
+          <h2>Formula SAE</h2>
+          <p class="tile-subtitle"><span>Melbourne University Racing</span></p>
+          <svg class="tile-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6" stroke-linecap="round"/><path d="M4.5 6H18v13.5"/></svg>
+        </div>
+      </a>
+      <a class="tile" href="rear-suspension.html">
+        <div class="tile-media"><img src="media/rear-suspension.jpg" loading="lazy" decoding="async" alt="The rear of the Formula SAE car's chassis on stands, showing the Öhlins dampers, rockers and drivetrain during assembly" width="1600" height="1200"></div>
+        <div class="tile-title">
+          <h2>Rear Suspension</h2>
+          <p class="tile-subtitle"><span>FSAE 2026 Rear Suspension Design</span></p>
+          <svg class="tile-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6" stroke-linecap="round"/><path d="M4.5 6H18v13.5"/></svg>
+        </div>
+      </a>
+      <a class="tile" href="tyre-model.html">
+        <div class="tile-media"><img src="media/tyre-model.png" loading="lazy" decoding="async" alt="MATLAB logo: an orange and blue 3D surface plot" width="1200" height="1074"></div>
+        <div class="tile-title">
+          <h2>Tyre Model</h2>
+          <p class="tile-subtitle"><span>FSAE Pacejka Magic Formula</span></p>
+          <svg class="tile-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6" stroke-linecap="round"/><path d="M4.5 6H18v13.5"/></svg>
+        </div>
+      </a>
+      <a class="tile" href="cyberstar.html">
+        <div class="tile-media"><img src="media/cyberstar-cover.png" loading="lazy" decoding="async" alt="Cover page of the Hashtag Cyberstar Assignment 2 design document, laid out as an engineering drawing sheet" width="1429" height="1010"></div>
+        <div class="tile-title">
+          <h2>Cyberstar</h2>
+          <p class="tile-subtitle"><span>A web design project</span></p>
+          <svg class="tile-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6" stroke-linecap="round"/><path d="M4.5 6H18v13.5"/></svg>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <script>
+    // Fade each tile in as it scrolls into view
+    (() => {
+      const tiles = document.querySelectorAll('.tile');
+      if (!('IntersectionObserver' in window)) {
+        tiles.forEach(t => t.classList.add('visible'));
+        return;
+      }
+      const observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        }
+      }, { threshold: 0.15 });
+      tiles.forEach(t => observer.observe(t));
+
+      // Pause the header's video while it's scrolled out of view, so it isn't decoding frames nobody sees. Where
+      // the visitor has asked for less motion it stays paused on its first frame.
+      const hero = document.querySelector('.hero');
+      const video = hero.querySelector('.hero-video');
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (still.matches) video.removeAttribute('autoplay');
+      new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting || still.matches) video.pause();
+        else video.play().catch(() => {});
+      }).observe(hero);
+    })();
+  </script>
+</body>
+</html>

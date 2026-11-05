@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="770" height="420" viewBox="0 0 770 420" fill="none" stroke="#111" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Side view of a Hoosier 16.0 x 7.5-10 FSAE slick on its rim, drawn like the rocker plate sketch, with a trace
+       of the MATLAB logo in the wheel opening. Sizes are to scale: 1 unit is 406.4 / 380 mm, so the tyre's 16 inch
+       outside diameter is 380 units across and the 10 inch rim 237.5. Its dimensions and notes sit either side of
+       it rather than above and below, so the tyre can be drawn as tall as its space on the Home page allows. -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="20" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0 0L10 3.5L0 7Z" fill="#111" stroke="none"/>
+    </marker>
+    <path id="sidewall-top" d="M158 210A142 142 0 0 1 442 210"/>
+    <path id="sidewall-bottom" d="M134 210A166 166 0 0 0 466 210"/>
+  </defs>
+
+  <!-- Centre lines, behind everything -->
+  <path d="M90 210H510M300 4V416" stroke-width="1.3" stroke-dasharray="30 7 7 7"/>
+
+  <!-- The tyre: its outside, the edge of the tread where the shoulder rounds over, then the rim's flange and seat -->
+  <circle cx="300" cy="210" r="190" stroke-width="2.9"/>
+  <circle cx="300" cy="210" r="181" stroke-width="1.9"/>
+  <circle cx="300" cy="210" r="127" stroke-width="2.9"/>
+  <circle cx="300" cy="210" r="118.75" stroke-width="1.9"/>
+
+  <!-- HOOSIER round the sidewall, top and bottom, as on the real tyre: outlined letters filled white (so the centre
+       lines pass behind them), centred on the middle of the sidewall. The top reads clockwise along an arc inside
+       that middle, and the bottom anticlockwise along one outside it, so both read upright. -->
+  <g fill="#fff" stroke-width="1.9" font-family="'Arial Black', Arial, Helvetica, sans-serif" font-weight="900" font-size="34" letter-spacing="3" text-anchor="middle">
+    <text><textPath href="#sidewall-top" startOffset="50%">HOOSIER</textPath></text>
+    <text><textPath href="#sidewall-bottom" startOffset="50%">HOOSIER</textPath></text>
+  </g>
+
+  <!-- The MATLAB logo, filled white so the centre lines pass behind it -->
+  <g transform="translate(205 125) scale(0.095)" stroke-width="30">
+    <path fill="#fff" d="M5 985 L570 745 C640 640 720 560 830 515 C900 488 960 470 1010 420 C1100 330 1180 150 1260 40 C1290 5 1340 -5 1380 30 C1460 100 1530 300 1620 560 C1720 860 1850 1180 1990 1462 C1900 1390 1800 1290 1700 1240 C1620 1205 1540 1210 1460 1260 C1300 1360 1100 1560 870 1785 C820 1690 760 1540 700 1430 C650 1340 600 1290 545 1278 C500 1270 460 1285 435 1297 Z"/>
+    <path d="M570 745 L830 925"/>
+    <path d="M440 1295 C600 1230 730 1090 830 925 C930 760 1060 520 1170 300 C1220 190 1260 90 1300 20" stroke-width="24"/>
+  </g>
+
+  <!-- Outside diameter, down the left side, from the tyre's top and bottom -->
+  <g stroke-width="1.5">
+    <path d="M244 20H50M244 400H50"/>
+    <path d="M60 20V400" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  </g>
+  <!-- Rim diameter, by a leader from the rim seat out to the upper right -->
+  <path d="M600 44H480L384 126" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- The note naming the tyre, with a leader from its sidewall out to the lower right -->
+  <path d="M740 352H500L413 323" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <g class="annotation" fill="#111" stroke="none" font-family="Arial, Helvetica, sans-serif" font-size="27">
+    <text x="50" y="210" transform="rotate(-90 50 210)" text-anchor="middle">Ø406</text>
+    <text x="486" y="36">Ø254</text>
+    <text x="506" y="312">HOOSIER</text>
+    <text x="506" y="344">16.0 × 7.5-10</text>
+    <text x="740" y="412" text-anchor="end">SIDE VIEW</text>
+  </g>
+</svg>

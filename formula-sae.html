@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formula SAE</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="nav.js" defer></script>
+  <!-- The team photo is the first thing on the page, so start downloading it straight away -->
+  <link rel="preload" href="media/formula-sae-team.jpg" as="image">
+  <style>
+    /* The picture across the top of the page: three fifths of the screen below the nav bar and its 2px border.
+       The photo is cropped to fill it, centred a little above its middle so the car and the two of us beside it
+       (faces included) stay in view even on a wide screen, where only a short strip of it shows. */
+    .fsae-hero {
+      position: relative;
+      margin: 0;
+    }
+    .fsae-picture {
+      display: block;
+      width: 100%;
+      height: calc((100vh - var(--nav-height) - 2px) * 0.6);
+      height: calc((100svh - var(--nav-height) - 2px) * 0.6);
+      object-fit: cover;
+      object-position: 50% 44%;
+    }
+    /* The team's name over the middle of the photo, in the nav bar's bold Bookman, with a soft shadow so it reads
+       over the busy picture behind it */
+    .fsae-hero h1 {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 0 16px;
+      font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+      font-weight: bold;
+      font-size: clamp(28px, 4.8vw, 76px);
+      line-height: 1.15;
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <nav id="nav">
+    <span class="nav-name">William Bartholomew</span>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html">Home</a>
+      <!-- This page belongs to Projects, so that link stays highlighted here -->
+      <a href="projects.html" aria-current="page">Projects</a>
+      <!-- The CV opens in a new tab, like the CV box on the Home drawing -->
+      <a href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
+    </div>
+  </nav>
+
+  <!-- Stub page for the Formula SAE project, linked from its tile on Projects and its sketch on the Home page's
+       Projects sheet. The content goes here. -->
+  <main id="content">
+    <header class="fsae-hero">
+      <img class="fsae-picture" src="media/formula-sae-team.jpg" width="2400" height="1752"
+        alt="William and a teammate in Melbourne University Racing shirts, crouched either side of the bare chassis of the car in the team's workshop, pointing at its rear suspension">
+      <h1>Melbourne University Racing</h1>
+    </header>
+  </main>
+</body>
+</html>

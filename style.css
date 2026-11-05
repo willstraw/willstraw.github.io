@@ -1,0 +1,225 @@
+/* Shared styles for every page: base page look and the blueprint nav bar */
+
+/* TeX Gyre Bonum: a free copy of Bookman, for phones and computers that have no Bookman installed.
+   It comes after the installed Bookmans in each font list, so browsers that have one never download it. */
+@font-face {
+  font-family: "TeX Gyre Bonum";
+  src: url("fonts/texgyrebonum-regular.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "TeX Gyre Bonum";
+  src: url("fonts/texgyrebonum-bold.otf") format("opentype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Space Grotesk: used by the Home intro and the Projects hero. It's a variable font, so one file covers every weight. */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("fonts/SpaceGrotesk.ttf") format("truetype");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+:root {
+  /* Nav bar height (not counting its 2px bottom border); pages that fill the screen below it use this too */
+  --nav-height: 76px;
+  /* Extra space before the name, inside the nav's 16px padding. The Home intro lines its heading up with the name
+     using this, so change it here to move both. */
+  --name-inset: clamp(0px, 1vw, 20px);
+}
+
+html, body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, Arial, sans-serif;
+  /* Soft off-white rather than pure white. viewer.css uses this same colour for the viewer and its bottom fade, so change them together. */
+  background: #f4f4f4;
+  color: #222;
+}
+
+/* Hide the page scrollbar for a cleaner look. The page still scrolls with the wheel, trackpad, touch and keyboard.
+   The first line covers Firefox and modern Chrome/Edge, and the ::-webkit rule covers Safari and older Chromium. */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+#nav {
+  height: var(--nav-height);
+  /* Blueprint: deep blue paper with a fine minor grid and a bolder major grid */
+  background-color: #19519a;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 0%, #2168bf 0%, transparent 70%);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px, 100% 100%;
+  background-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px, 0 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  /* Keep the phone drop-down menu above the 3D viewer */
+  position: relative;
+  z-index: 10;
+}
+/* The page links sit together on the right, evenly spaced, with the name on the left */
+#nav .nav-links {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 6vw, 120px);
+  padding-right: clamp(0px, 2vw, 40px);
+}
+#nav a {
+  font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+  font-weight: bold;
+  font-size: clamp(13px, 1.85vw, 23px);
+  line-height: 1.15;
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  padding: 6px 4px;
+  /* Shrink to the text width so the underline matches the word, not the whole column */
+  justify-self: center;
+  position: relative;
+}
+/* Underline that grows outward from the centre on hover */
+#nav a::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 2px;
+  height: 2px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s ease-out;
+}
+#nav a:hover::after,
+#nav a:focus-visible::after,
+#nav a[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+/* Full name on the left. It is plain text rather than a link, so it has no hover underline; it matches the links' look otherwise.
+   Phones show the "WB" initials instead, because the name won't fit beside the menu button. */
+#nav .nav-name {
+  font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+  font-weight: bold;
+  font-size: clamp(17px, 2.6vw, 34px);
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  padding: 6px 4px 6px var(--name-inset);
+}
+
+/* "WB" initials on the left, only shown on small screens */
+#nav .nav-brand {
+  display: none;
+  width: 44px;
+  padding: 0;
+  text-align: left;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+#nav .nav-brand::after { left: 0; right: 10px; bottom: -4px; }
+
+/* Current page name in the middle of the bar, only shown on small screens */
+.nav-title {
+  display: none;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: "ITC Bookman", "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", "TeX Gyre Bonum", serif;
+  font-weight: bold;
+  font-size: 22px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Burger button, only shown on small screens */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0 9px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-toggle span {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease-out, opacity 0.2s;
+}
+/* The three bars turn into an X while the menu is open */
+#nav.open .nav-toggle span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+#nav.open .nav-toggle span:nth-child(2) { opacity: 0; }
+#nav.open .nav-toggle span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+/* Small "menu" caption under the bars */
+.nav-toggle::after {
+  content: "menu";
+  align-self: center;
+  margin-top: -1px;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 720px) {
+  .nav-toggle { display: flex; }
+  .nav-title { display: block; }
+  #nav .nav-brand { display: block; }
+  #nav .nav-name { display: none; }
+  #nav .nav-links { gap: 0; }
+
+  /* The links drop down below the bar as a blueprint panel */
+  #nav .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0 12px;
+    background: inherit;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+  #nav.open .nav-links { display: flex; }
+  #nav a {
+    font-size: 20px;
+    padding: 12px 4px;
+  }
+  #nav a::after { bottom: 8px; }
+  #nav .nav-brand { font-size: 22px; padding: 0; }
+  #nav .nav-brand::after { bottom: -4px; }
+}

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" data-fixed-lines="" width="1260" height="694" viewBox="0 0 1260 694" fill="none" stroke="#111" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Side view of the Melbourne University Racing car, traced from a photo of it on track and drawn like the other
+       sketches: line work only (no livery), centre lines on the wheels, a wheelbase dimension and a view label.
+       Hidden edges (the rear wing's elements behind its endplate) are dashed. Line weights and the dimension's
+       text and arrowheads are drawn large for the size it shows at on the Home page. -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="32" markerHeight="23" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0 0L10 3.5L0 7Z" fill="#111" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Main roll hoop, and the truss from its top back to the rear wing -->
+  <g stroke-width="4.5">
+    <path d="M702 176L730 50Q742 34 758 44L774 334"/>
+    <path d="M714 176L740 58Q746 50 752 58L764 334"/>
+    <path d="M760 60L962 92M772 128L936 192M760 60L804 134L840 74L872 158L904 84L936 192"/>
+    <!-- The brace from the truss down to the rear frame -->
+    <path d="M936 192L980 332"/>
+  </g>
+
+  <!-- Rear wing: its endplate, and the elements behind it -->
+  <path d="M934 94L1230 78Q1236 78 1236 84V286L938 332Q932 334 932 326Z" stroke-width="5" fill="#fff"/>
+  <path d="M950 304C1030 276 1130 262 1226 258M958 224C1040 194 1130 178 1226 170M990 152C1070 130 1150 116 1226 110" stroke-width="2.8" stroke-dasharray="18 10"/>
+
+  <!-- Bodywork behind the driver, down to the diffuser -->
+  <path d="M772 300C800 292 860 288 930 292M980 332L1000 420L1060 404" stroke-width="4.5"/>
+  <path d="M986 520L1066 492" stroke-width="4.5"/>
+
+  <!-- The chassis and nose: from the nose tip along the top to the cockpit, the cockpit side, and the floor back to
+       the sidepod -->
+  <path fill="#fff" stroke-width="5" d="M18 364C30 334 120 304 260 288C360 278 430 272 462 276C476 280 486 292 496 304L560 336H780V400H600C596 420 594 440 596 452L420 452L140 446L38 440C22 420 14 392 18 364Z"/>
+  <!-- Cockpit opening line and the panel lines along the nose -->
+  <path d="M500 306C540 322 560 332 600 336M60 350C150 330 260 314 370 306" stroke-width="2.8"/>
+
+  <!-- Sidepod -->
+  <path fill="#fff" stroke-width="5" d="M600 400H912C952 402 990 412 1000 420V520H606C598 490 596 440 600 400Z"/>
+  <path d="M640 516H984" stroke-width="2.8"/>
+
+  <!-- The driver's shoulder and arm out to the steering wheel, above the cockpit side -->
+  <path d="M672 292C640 300 612 316 592 336M650 306C610 300 570 294 530 284" stroke-width="4.5"/>
+  <path d="M512 262L526 316" stroke-width="5"/>
+  <!-- Driver's helmet, with its visor -->
+  <path fill="#fff" stroke-width="5" d="M648 252C644 204 676 168 710 168C740 170 754 196 752 232L750 276C730 294 700 300 668 292C656 284 650 270 648 252Z"/>
+  <path d="M650 222C682 212 722 212 752 220M652 262C690 270 724 268 750 258" stroke-width="2.8"/>
+
+  <!-- Front wing: the element under the nose and its endplate -->
+  <path fill="#fff" stroke-width="5" d="M22 442C60 440 110 444 146 452L150 474C110 470 62 464 26 456Z"/>
+  <path fill="#fff" stroke-width="5" d="M140 452L392 440V514L150 520Z"/>
+
+  <!-- Wheels: tyre, rim and hub, with centre lines -->
+  <g fill="#fff" stroke-width="5">
+    <circle cx="505" cy="465" r="84"/>
+    <circle cx="1120" cy="462" r="82"/>
+  </g>
+  <g stroke-width="2.8">
+    <circle cx="505" cy="465" r="62"/>
+    <circle cx="1120" cy="462" r="60"/>
+    <circle cx="505" cy="465" r="18"/>
+    <circle cx="1120" cy="462" r="17"/>
+  </g>
+  <path d="M405 465H605M505 365V565M1022 462H1218M1120 364V560" stroke-width="2.4" stroke-dasharray="34 8 8 8"/>
+
+  <!-- Wheelbase -->
+  <path d="M505 572V634M1120 572V634" stroke-width="2.4"/>
+  <path d="M505 624H1120" stroke-width="2.4" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <g class="annotation" fill="#111" stroke="none" font-family="Arial, Helvetica, sans-serif" font-size="41">
+    <text x="812" y="612" text-anchor="middle">1530</text>
+    <text x="812" y="684" text-anchor="middle">SIDE VIEW</text>
+  </g>
+</svg>

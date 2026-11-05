@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rear Suspension</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="nav.js" defer></script>
+  <link rel="stylesheet" href="viewer.css">
+  <!-- Start downloading the model straight away, alongside three.js, rather than once the scripts have run -->
+  <link rel="preload" href="VD26_Rear_Suspension.bin" as="fetch" crossorigin>
+  <style>
+    /* The viewer fills the top three fifths of the screen below the nav bar and its 2px border, like the picture on
+       the Formula SAE page, leaving the rest for the write-up below it */
+    #suspension-viewer {
+      height: calc((100vh - var(--nav-height) - 2px) * 0.6);
+      height: calc((100svh - var(--nav-height) - 2px) * 0.6);
+    }
+  </style>
+</head>
+<body>
+  <nav id="nav">
+    <span class="nav-name">William Bartholomew</span>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html">Home</a>
+      <!-- This page belongs to Projects, so that link stays highlighted here -->
+      <a href="projects.html" aria-current="page">Projects</a>
+      <!-- The CV opens in a new tab, like the CV box on the Home drawing -->
+      <a href="media/cv.pdf" target="_blank" rel="noopener">CV</a>
+    </div>
+  </nav>
+
+  <section id="suspension-viewer" class="viewer-fade"></section>
+
+  <script src="viewer.js" defer></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { downloadModel, readModel } from './model.js';
+
+    // Made from the Fusion OBJ + MTL export with tools/convert-model.html, which also works out the
+    // outline edges (where faces meet at more than 35°) so the page doesn't have to
+    const MODEL = 'VD26_Rear_Suspension.bin';
+    const Z_UP = true;          // Fusion export is Z-up; set false if the model appears lying on its side
+    const SHOW_EDGES = true;    // dark outlines on sharp edges, like Fusion
+    const ZOOM_MARGIN = 1.25;   // starting zoom: bigger = more zoomed out
+
+    // Fusion-like shaded material in a part's colour
+    function fusionMaterial(color) {
+      return new THREE.MeshStandardMaterial({
+        color: new THREE.Color(...color),
+        metalness: 0.15,
+        roughness: 0.5,
+        side: THREE.DoubleSide,
+        // Push faces back slightly so the edge lines draw cleanly on top
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      });
+    }
+
+    const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    createViewer(THREE, document.getElementById('suspension-viewer'), {
+      async load({ setStatus }) {
+        if (location.protocol === 'file:') {
+          throw new Error('browsers block loading model files from a page opened directly from disk — use Live Server or another local web server');
+        }
+
+        const file = await downloadModel(MODEL, progress => {
+          setStatus(`Loading model… ${Math.round(progress * 100)}%`);
+        });
+
+        // Unpacking the model blocks the page briefly, so show a message first
+        setStatus('Building model…');
+        await nextFrame();
+
+        // One mesh per part colour, plus all the outline edges in one go
+        const { meshes, edges } = await readModel(file);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x2d2d2d });
+        const obj = new THREE.Group();
+        for (const { color, geometry } of meshes) {
+          obj.add(new THREE.Mesh(geometry, fusionMaterial(color)));
+        }
+        if (SHOW_EDGES) obj.add(new THREE.LineSegments(edges, edgeMaterial));
+
+        if (Z_UP) obj.rotation.x = -Math.PI / 2;
+
+        // Centre the model on the origin so it spins around its middle
+        const model = new THREE.Group();
+        model.add(obj);
+        model.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        obj.position.sub(center);
+        const radius = box.getBoundingSphere(new THREE.Sphere()).radius;
+
+        // Grid sits just under the model, scaled to a sensible spacing for its size
+        const major = Math.pow(10, Math.floor(Math.log10(radius)));
+
+        return {
+          model,
+          radius,
+          floorY: box.min.y - center.y - radius * 0.002,
+          grid: { size: radius * 8, minor: major / 5, major },
+          // Back the camera off far enough that the model fits whichever way it is turned
+          fit(fov, aspect) {
+            const vHalf = fov / 2;
+            const hHalf = Math.atan(Math.tan(vHalf) * aspect);
+            return (radius / Math.sin(Math.min(vHalf, hHalf))) * ZOOM_MARGIN;
+          },
+        };
+      },
+    });
+  </script>
+</body>
+</html>
