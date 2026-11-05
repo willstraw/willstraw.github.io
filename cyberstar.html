@@ -47,6 +47,126 @@
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 0, 0, 0.35);
       pointer-events: none;
     }
+    /* The design document's cover, in the write-up's third column (under the text on phones): a white sheet with a
+       thin outline and a soft shadow, captioned underneath in the write-up's grey */
+    .doc-cover {
+      margin: 0;
+    }
+    .doc-open {
+      display: block;
+      cursor: zoom-in;
+    }
+    .doc-cover img {
+      display: block;
+      width: 100%;
+      height: auto;
+      box-sizing: border-box;
+      border: 1px solid #c9cdd3;
+      background: #fff;
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.12);
+      transition: transform 0.2s ease-out;
+    }
+    /* The sheet lifts a little on hover, like picking it up. Only transform animates, so it stays cheap. */
+    @media (hover: hover) {
+      .doc-open:hover img { transform: translateY(-4px); }
+      .doc-open:hover + figcaption .doc-hint { color: #d97946; }
+    }
+    .doc-open:focus-visible {
+      outline: 2px solid #2b69f7;
+      outline-offset: 4px;
+    }
+    .doc-cover figcaption {
+      margin-top: 10px;
+      font-size: 0.85em;
+      color: #5a5f68;
+    }
+    .doc-hint {
+      color: #2b69f7;
+      transition: color 0.15s ease-out;
+    }
+
+    /* The document viewer: the pages in one scrolling column on a dark backdrop, each as wide as the screen allows up
+       to 1200px, under a bar with the title and a close button. The page behind stops scrolling while it's open. */
+    html:has(.doc-viewer[open]) { overflow: hidden; }
+    .doc-viewer {
+      width: 100vw;
+      max-width: none;
+      height: 100vh;
+      height: 100svh;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: rgba(20, 22, 26, 0.92);
+      color: #fff;
+      font-family: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+    }
+    .doc-viewer[open] {
+      display: flex;
+      flex-direction: column;
+      animation: doc-in 0.2s ease-out;
+    }
+    .doc-viewer::backdrop { background: transparent; }
+    @keyframes doc-in {
+      from { opacity: 0; }
+    }
+    .doc-viewer-bar {
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 16px;
+      background: #19519a;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+    }
+    .doc-viewer-bar p {
+      margin: 0;
+      font-size: 15px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .doc-close {
+      flex: none;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #fff;
+      font-size: 30px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    @media (hover: hover) {
+      .doc-close:hover { color: #d97946; }
+    }
+    .doc-viewer-pages {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 24px 16px 48px;
+    }
+    .doc-viewer-pages img {
+      display: block;
+      width: 100%;
+      max-width: 1200px;
+      height: auto;
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+    @media (max-width: 720px) {
+      .doc-viewer-pages { gap: 12px; padding: 12px 8px 32px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .doc-cover img, .doc-hint { transition: none; }
+      .doc-viewer[open] { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -63,8 +183,9 @@
     </div>
   </nav>
 
-  <!-- Stub page for the CyberStar project, linked from its tile on Projects and its sketch on the Home page's
-       Projects sheet. The content goes here. -->
+  <!-- The CyberStar project, linked from its tile on Projects and its sketch on the Home page's Projects sheet. The
+       write-up uses the shared .writeup styles in style.css, in columns like the Tyre Model page, with the design
+       document's cover in the third column. -->
   <main id="content">
     <!-- The pages were rendered from the design document's PDF into one image, five to a row -->
     <header class="project-hero">
@@ -72,6 +193,74 @@
         alt="All 15 pages of the Hashtag CyberStar design document, each laid out as an engineering drawing sheet, in three rows">
       <h1>A Class in Web Design</h1>
     </header>
+
+    <section class="writeup writeup-columns">
+      <div class="writeup-body">
+        <p>
+          Hashtag CyberStar was a third-year class for me, which focused briefly on the history of the internet before
+          shifting into website design, in both its design presentation and coding aspects. This was quite different
+          from the maths and physics-based classes I’m used to taking, but after reading the class description I
+          wanted to do two things: push myself to do something different and learn something along the way, and, for
+          my final project, make a website I’d be able to keep and manage well after I’ve completed the class.
+        </p>
+        <p>
+          And here it is: this website, the one you are currently on, is my final project for this class. It’s most
+          likely changed since its original iterations, but the premise, meaning and part of me it displays should
+          still be the same. Click the design document’s cover to view the full thing.
+        </p>
+        <!-- Clicking the cover opens the whole document in the viewer below. Without JavaScript the link just opens
+             the first page's picture. -->
+        <figure class="doc-cover">
+          <a href="media/cyberstar-doc/page-01.jpg" class="doc-open" aria-haspopup="dialog">
+            <img src="media/cyberstar-cover.png" width="1429" height="1010" loading="lazy" decoding="async"
+              alt="Cover page of the Hashtag CyberStar Assignment 2 design document, laid out as an engineering drawing sheet">
+          </a>
+          <figcaption>Design document, Assignment 2 · <span class="doc-hint">click to view all 15 pages</span></figcaption>
+        </figure>
+      </div>
+    </section>
   </main>
+
+  <!-- The full design document, opened from the cover. Its pages are pictures rendered from the PDF with the student
+       ID painted out (the PDF itself isn't on the site). The script fills in the 15 pages. -->
+  <dialog class="doc-viewer" aria-label="Hashtag CyberStar design document">
+    <div class="doc-viewer-bar">
+      <p>Hashtag CyberStar · Design document, Assignment 2</p>
+      <button type="button" class="doc-close" aria-label="Close">×</button>
+    </div>
+    <div class="doc-viewer-pages"></div>
+  </dialog>
+
+  <script>
+    // Opens the design document over the page. Esc, the close button or a click on the dark space round the pages
+    // closes it. The pages load lazily, so only the first couple download straight away.
+    (() => {
+      const PAGES = 15;
+      const viewer = document.querySelector('.doc-viewer');
+      const pages = viewer.querySelector('.doc-viewer-pages');
+      const opener = document.querySelector('.doc-open');
+      if (!viewer.showModal) return;
+      for (let n = 1; n <= PAGES; n++) {
+        const img = document.createElement('img');
+        img.src = `media/cyberstar-doc/page-${String(n).padStart(2, '0')}.jpg`;
+        img.width = 1800;
+        img.height = 1273;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.alt = `Page ${n} of ${PAGES} of the design document`;
+        pages.append(img);
+      }
+      opener.addEventListener('click', (e) => {
+        e.preventDefault();
+        viewer.showModal();
+        pages.scrollTop = 0;
+      });
+      viewer.querySelector('.doc-close').addEventListener('click', () => viewer.close());
+      // A click that lands on the viewer itself, or the gaps round the pages, rather than on a page or the bar
+      viewer.addEventListener('click', (e) => {
+        if (e.target === viewer || e.target === pages) viewer.close();
+      });
+    })();
+  </script>
 </body>
 </html>

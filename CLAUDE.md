@@ -27,13 +27,13 @@ from the jsDelivr CDN through an import map in each page that needs it.
 | `model.js` | ES module for the compact `.bin` model format: `encodeModel`, `downloadModel`, `readModel`. |
 | `tools/convert-model.html` | In-browser tool that turns a Fusion OBJ + MTL export into a `.bin`. Must be opened via Live Server. |
 | `VD26_Rear_Suspension.bin` | Converted model (2.4 MB). The 64 MB source OBJ and its MTL were deleted (they're still in git history). Shown on `rear-suspension.html`. |
-| `media/` | Pictures, sketches and the video. Photos are saved as web-sized JPEG copies (about 1200–2400px wide), not the camera originals. `cv.pdf` is the CV with the personal email and mobile taken out (a redacted copy of the owner's own PDF, not a re-export, so update it by redacting a new export again). |
+| `media/` | Pictures, sketches and the video. Photos are saved as web-sized JPEG copies (about 1200–2400px wide), not the camera originals. `cv.pdf` is the CV with the personal email and mobile taken out (a redacted copy of the owner's own PDF, not a re-export, so update it by redacting a new export again). `cyberstar-doc/page-01…15.jpg` are the CyberStar Assignment 2 design document's pages (1800px wide), rendered from the owner's PDF with the student ID painted out of page 1's title block; the PDF itself stays off the site. `cyberstar.html` opens them in a `<dialog>` viewer from the cover in its write-up. |
 | `fonts/` | `ArchivoBlack-Regular.ttf` and `SpaceGrotesk.ttf` (with OFL licences), loaded with `@font-face` in `projects.css` (Archivo) and `style.css` (Space Grotesk, shared with the Home intro). `texgyrebonum-{regular,bold}.otf` (GUST licence, files left unmodified) are declared in `style.css`. `archivo-black.js` holds the same Archivo glyphs pre-converted to three.js font JSON as `window.ARCHIVO_BLACK`, for the Home page's 3D text. |
 
 ## Conventions and gotchas
 
 - **The nav markup is copied into every page.** Adding, renaming or reordering a link (or the name) means editing every HTML page (Home, Projects and the four project pages) and keeping
-  `aria-current="page"` on the right one. The links are Home, Projects and CV (`cv.html`; the Home drawing's note 3 and CV box link there too, and note 3 pairs with the nav link by href, so keep their hrefs identical); `.nav-links` is a flex row with a gap, so any number of links fits. The CV page has the nav as well.
+  `aria-current="page"` on the right one. The links are Home, Projects and CV (`cv.html`; the Home drawing's note 3 links there too, and pairs with the nav link by href, so keep their hrefs identical); `.nav-links` is a flex row with a gap, so any number of links fits. The CV page has the nav as well.
 - **One breakpoint: `max-width: 720px`.** It's used in `style.css`, `viewer.css`, `projects.css`, the inline styles in `index.html`
   and the `staticOnPhones` media query in `viewer.js`. Keep them in step.
 - Phone heights use a `vh` line followed by an `svh` override, for browsers without `svh`.
@@ -86,7 +86,7 @@ the working page code (Z-up rotation, Fusion-like `MeshStandardMaterial` with `p
 - Don't commit raw CAD exports (OBJ files are tens of MB). Only the `.bin` is needed at runtime, so convert, then keep the OBJ out of the repo.
 - Everything in the repo is public, so nothing personal goes in it (the CV in `media/` has the personal email and mobile removed).
 - Project write-ups go in a `<section class="writeup"><div class="writeup-body">` after the page's picture (shared
-  styles in `style.css`). Add `writeup-columns` to the section to set its paragraphs side by side, as the Tyre Model
-  and Formula SAE pages do.
-- Still to be filled in: the write-ups on the Rear Suspension and Cyberstar pages, and the timeline text and pictures for the events still to
+  styles in `style.css`). Add `writeup-columns` to the section to set its paragraphs side by side, as every project
+  page does.
+- Still to be filled in: the timeline text and pictures for the events still to
   come (the competition onwards; their buttons switch on by themselves once their date passes).

@@ -1050,39 +1050,6 @@
       }
     }
 
-    /* Link to the CV: a plain outlined box with "CV" in link blue, turning orange on hover. On desktop it sits level
-       with the notes, centred on them, with its right edge in line with the headshot's. On phones (no notes) it goes
-       under the headshot against its right edge. The script places it and shows it with the headshot's photo.
-       Its size is set here and read by the script. */
-    .sheet-cv {
-      position: absolute;
-      display: grid;
-      place-items: center;
-      box-sizing: border-box;
-      width: 128px;
-      height: 52px;
-      border: 1.5px solid #111;
-      background: #fff;
-      color: #2b69f7;
-      font-size: 18px;
-      letter-spacing: 0.08em;
-      text-decoration: none;
-      visibility: hidden;
-      pointer-events: auto;
-      opacity: var(--shot-x, 0);
-      transition: color 0.15s ease-out;
-    }
-    @media (hover: hover) {
-      .sheet-cv:hover { color: #d97946; }
-    }
-    @media (max-width: 720px) {
-      .sheet-cv {
-        width: 96px;
-        height: 42px;
-        font-size: 16px;
-      }
-    }
-
     /* Notes, above the bottom-left corner of the border, like the general notes on a drawing. Its items are the nav's
        links, so it takes over as the nav once the real one has faded. Each link has two looks stacked up: .look-nav
        copies the nav link exactly (the script matches its size), and .look-ink is the drawing lettering. As you scroll,
@@ -1351,8 +1318,6 @@
       <svg aria-hidden="true"></svg>
     </div>
 
-    <!-- Opens the CV page (cv.html), which shows media/cv.pdf -->
-    <a class="sheet-cv" href="cv.html">CV</a>
 
     <p class="sheet-text">
       To properly introduce myself, I’m Will. I’m a current undergraduate student studying mechanical engineering, and
@@ -1720,7 +1685,6 @@
       const dims = sheet.querySelector('.sheet-dims');
       const viewLabel = sheet.querySelector('.sheet-view');
       const text = sheet.querySelector('.sheet-text');
-      const cv = sheet.querySelector('.sheet-cv');
       const [dimWidth, dimHeight] = dims.querySelectorAll('.dim-value');
       const scaleEl = sheet.querySelector('.tb-scale');
       const cube = section.querySelector('.viewcube-wrap');
@@ -2359,21 +2323,10 @@
         return { x: x - (width - wordW) / 2, y: y + wordH / 2 - width / 4, width, height: width / 2 };
       }
 
-      // On phones the CV box goes this far under the headshot
-      const CV_GAP = 16;
-
-      // Lines the CV box's right edge up with the headshot's, with its top at the given height. Returns its bottom.
-      function placeCv(shotRight, top) {
-        top = Math.round(top);
-        cv.style.left = `${Math.round(shotRight - cv.offsetWidth)}px`;
-        cv.style.top = `${top}px`;
-        return top + cv.offsetHeight;
-      }
-
       // Phones: the word spans the sheet's width, less room each side for its height dimension, at the top of the
       // sheet with room above it for its width dimension. The headshot box goes in the middle under it at a 3:4
-      // portrait shape with the CV box under it, and the paragraph fills the rest of the sheet under that, down to the
-      // fast-travel index along the bottom. The headshot takes 60% of the height left, so the paragraph gets the rest.
+      // portrait shape, and the paragraph fills the rest of the sheet 20px under that, down to the fast-travel index
+      // along the bottom. The headshot takes 60% of the height left, so the paragraph gets the rest.
       function layoutPhoneTop(w, h) {
         const wordW = w - 2 * (margin + 52);
         const wordH = (wordW * word.height) / word.width;
@@ -2382,10 +2335,9 @@
 
         const inner = w - 2 * (margin + 24);
         const shotTop = top + wordH + 64;
-        cv.style.width = '';
         // The fast-travel index runs along the bottom of the sheet first, and everything else fits above it
         placeIndex(margin + 24, h - margin - 14, inner, 36, 46);
-        const room = index.offsetTop - 16 - shotTop - CV_GAP - cv.offsetHeight - 20;
+        const room = index.offsetTop - 16 - shotTop - 20;
         let shotH = Math.max(room * 0.6, 120);
         let shotW = shotH * 0.75;
         if (shotW > inner) {
@@ -2394,7 +2346,7 @@
         }
         const shotLeft = (w - shotW) / 2;
         placeShot(shotLeft, shotTop, shotW, shotH);
-        const textTop = placeCv(shotLeft + shotW, shotTop + shotH + CV_GAP) + 20;
+        const textTop = Math.round(shotTop + shotH) + 20;
         Object.assign(text.style, {
           left: `${margin + 24}px`,
           top: `${Math.round(textTop)}px`,
@@ -2452,13 +2404,6 @@
         const shotW = Math.min(shotH * 0.75, titleBlock.offsetLeft - 40 - left);
         shotH = shotW / 0.75;
         placeShot(left, shotTop, shotW, shotH);
-        // The CV box, centred on the notes' height. On narrower screens the headshot is narrower, so the box also
-        // narrows if it needs to, to keep at least 24px clear of the notes.
-        cv.style.width = '';
-        const shotRight = left + Math.round(shotW);
-        const room = shotRight - (notes.offsetLeft + notes.offsetWidth + 24);
-        if (room < cv.offsetWidth) cv.style.width = `${Math.max(room, 56)}px`;
-        placeCv(shotRight, listTop + (notes.offsetHeight - cv.offsetHeight) / 2);
 
         // The paragraph: from the headshot's top down to 40px above the title block, and from the title block's left
         // edge to the sheet's border, less the same 48px gap the notes keep from it
@@ -2624,7 +2569,6 @@
         }
         shot.style.visibility = shotOutline > 0 ? 'visible' : 'hidden';
         // Hidden until it starts fading in, so it can't be clicked while invisible
-        cv.style.visibility = shotFill > 0 ? 'visible' : 'hidden';
         shot.style.setProperty('--shot', shotOutline);
         // Set on the sheet so the paragraph fades in with the headshot's photo, and the index with them
         sheet.style.setProperty('--shot-x', shotFill);
