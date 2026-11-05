@@ -86,6 +86,7 @@ the working page code (Z-up rotation, Fusion-like `MeshStandardMaterial` with `p
 - Don't commit raw CAD exports (OBJ files are tens of MB). Only the `.bin` is needed at runtime, so convert, then keep the OBJ out of the repo.
 - Everything in the repo is public, so nothing personal goes in it (the CV in `media/` has the personal email and mobile removed).
 - Project write-ups go in a `<section class="writeup"><div class="writeup-body">` after the page's picture (shared
-  styles in `style.css`); the Tyre Model page has the first one.
-- Still to be filled in: the write-ups on the Formula SAE, Rear Suspension and Cyberstar pages, and the timeline text and pictures for the events still to
+  styles in `style.css`). Add `writeup-columns` to the section to set its paragraphs side by side, as the Tyre Model
+  and Formula SAE pages do.
+- Still to be filled in: the write-ups on the Rear Suspension and Cyberstar pages, and the timeline text and pictures for the events still to
   come (the competition onwards; their buttons switch on by themselves once their date passes).
